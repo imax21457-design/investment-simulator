@@ -108,15 +108,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [serverUrl, setServerUrlState] = useState<string>(() => {
+    const override = localStorage.getItem('server_url_override');
+    if (override) return override;
     const stored = localStorage.getItem('server_url');
     if (stored) return stored;
-    return Capacitor.isNativePlatform() ? 'http://10.0.2.2:5000' : '';
+    return Capacitor.isNativePlatform() ? 'https://investment-simulator-l4dr.onrender.com' : '';
   });
 
   const setServerUrl = (url: string) => {
-    localStorage.setItem('server_url', url);
+    localStorage.setItem('server_url_override', url);
     setServerUrlState(url);
   };
+
+  useEffect(() => {
+    const GITHUB_CONFIG_URL = 'https://raw.githubusercontent.com/imax21457-design/investment-simulator/main/server_url.json';
+    
+    fetch(GITHUB_CONFIG_URL)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch remote server config');
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.url) {
+          console.log('Dynamic server URL loaded from GitHub:', data.url);
+          localStorage.setItem('server_url', data.url);
+          const override = localStorage.getItem('server_url_override');
+          if (!override) {
+            setServerUrlState(data.url);
+          }
+        }
+      })
+      .catch(err => {
+        console.warn('Could not fetch remote server config, using fallback:', err);
+      });
+  }, []);
 
   const apiUrl = serverUrl ? `${serverUrl}/api` : '/api';
 
