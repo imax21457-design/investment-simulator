@@ -191,7 +191,7 @@ app.post('/api/game-state', authenticateToken, async (req, res) => {
 const DIST_PATH = path.join(__dirname, '../dist');
 if (fs.existsSync(DIST_PATH)) {
   app.use(express.static(DIST_PATH));
-  app.get('*', (req, res) => {
+  app.get('*splat', (req, res) => {
     res.sendFile(path.join(DIST_PATH, 'index.html'));
   });
   console.log('Serving frontend from production build.');
