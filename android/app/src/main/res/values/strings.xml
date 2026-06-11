@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Investment Simulator</string>
+    <string name="title_activity_main">Investment Simulator</string>
+    <string name="package_name">com.ivanr.investmentsimulator</string>
+    <string name="custom_url_scheme">com.ivanr.investmentsimulator</string>
+</resources>
