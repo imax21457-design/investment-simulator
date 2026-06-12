@@ -60,8 +60,16 @@ const TRANSLATIONS = {
     buyUpgrade: 'Купить',
     alreadyPurchased: 'Куплено',
     businessManagement: 'Управление бизнесом',
-    currentLevel: 'Текущий уровень',
     multiplier: 'Множитель',
+    upgradeClick: 'Улучшить клик',
+    clickLevel: 'Уровень клика',
+    earnVal: 'Клик приносит',
+    buyForecast: 'Купить прогноз',
+    forecastActive: 'Прогноз активен',
+    forecastGrowth: '🚀 РОСТ',
+    forecastDecline: '📉 ПАДЕНИЕ',
+    forecastTimeLeft: 'сек',
+    maxLevel: 'МАКС. УРОВЕНЬ',
   },
   en: {
     title: 'InvestSim',
@@ -120,6 +128,15 @@ const TRANSLATIONS = {
     businessManagement: 'Business Management',
     currentLevel: 'Current Level',
     multiplier: 'Multiplier',
+    upgradeClick: 'Upgrade Click',
+    clickLevel: 'Click Level',
+    earnVal: 'Click earns',
+    buyForecast: 'Buy Forecast',
+    forecastActive: 'Forecast Active',
+    forecastGrowth: '🚀 GROWTH',
+    forecastDecline: '📉 DECLINE',
+    forecastTimeLeft: 'sec',
+    maxLevel: 'MAX LEVEL',
   }
 };
 
@@ -166,7 +183,7 @@ const StockDetailsModal = ({
   onClose: () => void;
   onOpenFullChart: (symbol: string) => void;
 }) => {
-  const { stocks, ownedStocks, cash, buyStock, sellStock, language } = useGame();
+  const { stocks, ownedStocks, cash, buyStock, sellStock, buyStockForecast, activeForecasts, language } = useGame();
   const stock = stocks.find(s => s.symbol === symbol);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -408,6 +425,57 @@ const StockDetailsModal = ({
                 <div className="detail-stat-value" style={{ fontSize: '1rem', fontWeight: 700 }}>{stat.value}</div>
               </div>
             ))}
+          </div>
+
+          {/* Forecast section */}
+          <div className="forecast-card" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px', borderRadius: '6px', marginBottom: '15px', textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>🔮 {t.buyForecast} (100% Accuracy)</span>
+              {activeForecasts && activeForecasts[stock.symbol] ? (
+                <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(78,204,163,0.1)', color: '#4ecca3', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                  {t.forecastActive}
+                </span>
+              ) : null}
+            </div>
+
+            {activeForecasts && activeForecasts[stock.symbol] && activeForecasts[stock.symbol].ticksLeft > 0 ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>
+                  {language === 'ru' ? 'Направление' : 'Forecasted'}: {' '}
+                  <span style={{ color: activeForecasts[stock.symbol].direction === 'up' ? '#4ecca3' : '#e94560' }}>
+                    {activeForecasts[stock.symbol].direction === 'up' ? t.forecastGrowth : t.forecastDecline}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  {activeForecasts[stock.symbol].ticksLeft} {t.forecastTimeLeft}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', flex: 1, lineHeight: 1.3 }}>
+                  {language === 'ru' 
+                    ? 'Анализ рынка на 15 секунд. Изменяет тренд цены!' 
+                    : '15-second analysis. Shunts price trend!'}
+                </div>
+                <button
+                  onClick={() => buyStockForecast(stock.symbol)}
+                  disabled={cash < Math.max(100, Math.round(stock.price * 3))}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                    border: '1.5px solid rgba(241, 196, 15, 0.3)',
+                    color: '#f1c40f',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  💵 {formatCurrency(Math.max(100, Math.round(stock.price * 3)))}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="modal-trade-section" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '15px' }}>
@@ -806,26 +874,37 @@ const BusinessDetailsModal = ({
 
           {/* Level Up section */}
           <div className="upgrade-level-section" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, textAlign: 'left' }}>{t.upgradeLevel} ({level} ➔ {level + 1})</div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', textAlign: 'left' }}>
-                  {t.nextLevelIncome}: <span style={{ color: '#4ecca3', fontWeight: 700 }}>{formatCurrency(nextLevelIncome)} / {t.sec}</span>
+            {level >= 20 ? (
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <span style={{ color: 'var(--accent-color)', fontWeight: 800, fontSize: '1.1rem' }}>🎉 {t.maxLevel} (20/20)</span>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '6px' }}>
+                  {language === 'ru' ? 'Достигнут максимальный предел эффективности для этой компании.' : 'Maximum efficiency limit reached for this company.'}
                 </div>
               </div>
-              <div style={{ textAlign: 'right', fontWeight: 700, color: cash >= nextLevelCost ? '#fff' : '#e94560' }}>
-                {formatCurrency(nextLevelCost)}
-              </div>
-            </div>
-            
-            <button
-              onClick={() => upgradeBusinessLevel(business.id)}
-              disabled={cash < nextLevelCost}
-              className="buy-btn"
-              style={{ width: '100%', padding: '12px 0', fontSize: '1rem', fontWeight: 700 }}
-            >
-              {t.upgradeLevel}
-            </button>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, textAlign: 'left' }}>{t.upgradeLevel} ({level} ➔ {level + 1})</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', textAlign: 'left' }}>
+                      {t.nextLevelIncome}: <span style={{ color: '#4ecca3', fontWeight: 700 }}>{formatCurrency(nextLevelIncome)} / {t.sec}</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontWeight: 700, color: cash >= nextLevelCost ? '#fff' : '#e94560' }}>
+                    {formatCurrency(nextLevelCost)}
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => upgradeBusinessLevel(business.id)}
+                  disabled={cash < nextLevelCost}
+                  className="buy-btn"
+                  style={{ width: '100%', padding: '12px 0', fontSize: '1rem', fontWeight: 700 }}
+                >
+                  {t.upgradeLevel}
+                </button>
+              </>
+            )}
           </div>
 
           {/* Upgrades section */}
@@ -895,7 +974,7 @@ function App() {
   const [selectedFullChartSymbol, setSelectedFullChartSymbol] = useState<string | null>(null);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
 
-  const { cash, netWorth, stocks, ownedStocks, businesses, ownedBusinesses, businessStates, luxuryAssets, ownedLuxuryAssets, news, language, user, login, logout, buyStock, sellStock, buyBusiness, buyLuxuryAsset, addCash, resetGame, setLanguage, serverUrl } = useGame();
+  const { cash, netWorth, stocks, ownedStocks, businesses, ownedBusinesses, businessStates, clickLevel, luxuryAssets, ownedLuxuryAssets, news, language, user, login, logout, buyStock, sellStock, buyBusiness, upgradeClick, buyLuxuryAsset, addCash, resetGame, setLanguage, serverUrl } = useGame();
 
 
   const t = TRANSLATIONS[language];
@@ -985,7 +1064,51 @@ function App() {
             <div className="card">
               <h3>{t.stats}</h3>
               <p>{t.netWorth}: <span className="stat-value">{formatCurrency(netWorth)}</span></p>
-              <button onClick={() => addCash(10)}>{t.earn}</button>
+            </div>
+            
+            <div className="card clicker-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <h3 style={{ margin: 0, textAlign: 'left' }}>🖱️ {language === 'ru' ? 'Активный доход (Кликер)' : 'Active Clicker'}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{t.clickLevel}</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '2px' }}>{clickLevel || 1}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{t.earnVal}</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-color)', marginTop: '2px' }}>
+                    {formatCurrency(10 + ((clickLevel || 1) - 1) * 15)}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
+                <button 
+                  onClick={() => addCash(10)} 
+                  className="buy-btn"
+                  style={{ flex: 1.5, padding: '12px', fontWeight: 700, fontSize: '0.95rem' }}
+                >
+                  💵 {language === 'ru' ? `Кликнуть (+${10 + ((clickLevel || 1) - 1) * 15}$)` : `Click (+${10 + ((clickLevel || 1) - 1) * 15}$)`}
+                </button>
+                
+                <button 
+                  onClick={upgradeClick}
+                  disabled={cash < Math.round(100 * Math.pow(1.8, (clickLevel || 1) - 1))}
+                  style={{ 
+                    flex: 1, 
+                    padding: '12px', 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem', 
+                    backgroundColor: 'rgba(78, 204, 163, 0.1)', 
+                    border: '1.5px solid rgba(78, 204, 163, 0.3)',
+                    color: 'var(--accent-color)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                  className="click-upgrade-btn"
+                >
+                  ⚡ {t.upgradeClick} <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginTop: '2px' }}>{formatCurrency(Math.round(100 * Math.pow(1.8, (clickLevel || 1) - 1)))}</div>
+                </button>
+              </div>
             </div>
             
             <div className="card">

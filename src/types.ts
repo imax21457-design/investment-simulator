@@ -47,6 +47,8 @@ export interface GameState {
   businesses: Business[];
   ownedBusinesses: string[]; // ids
   businessStates?: { [id: string]: { level: number; upgrades: string[] } };
+  clickLevel?: number;
+  activeForecasts?: { [symbol: string]: { direction: 'up' | 'down'; ticksLeft: number } };
   luxuryAssets: LuxuryAsset[];
   ownedLuxuryAssets: string[]; // ids
   tick: number;

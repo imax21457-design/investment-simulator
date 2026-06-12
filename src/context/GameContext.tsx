@@ -8,6 +8,8 @@ interface GameContextType extends GameState {
   buyBusiness: (id: string) => void;
   upgradeBusinessLevel: (id: string) => void;
   buyBusinessUpgrade: (businessId: string, upgradeId: string) => void;
+  upgradeClick: () => void;
+  buyStockForecast: (symbol: string) => void;
   buyLuxuryAsset: (id: string) => void;
   addCash: (amount: number) => void;
   resetGame: () => void;
@@ -159,6 +161,8 @@ const INITIAL_STATE: GameState = {
   businesses: INITIAL_BUSINESSES,
   ownedBusinesses: [],
   businessStates: {},
+  clickLevel: 1,
+  activeForecasts: {},
   luxuryAssets: INITIAL_LUXURY_ASSETS,
   ownedLuxuryAssets: [],
   tick: 0,
@@ -264,6 +268,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setState({
             ...data,
             businessStates: mergedBusinessStates,
+            clickLevel: data.clickLevel || 1,
+            activeForecasts: data.activeForecasts || {},
             luxuryAssets: mergedLuxuryAssets,
             stocks: mergedStocks
           });
@@ -322,17 +328,45 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const currentEvent = NEWS_EVENTS.find(e => e.id === activeEventId);
       
+      const nextForecasts = { ...prev.activeForecasts };
+
       const newStocks = prev.stocks.map((stock) => {
         let volatility = stock.volatility;
         let trend = 0;
-        if (currentEvent && ticksLeft <= 12 && ticksLeft > 0) {
+
+        const forecast = nextForecasts[stock.symbol];
+        let hasForecast = false;
+
+        if (forecast && forecast.ticksLeft > 0) {
+          hasForecast = true;
+          trend = forecast.direction === 'up' ? 0.045 : -0.045;
+          nextForecasts[stock.symbol] = {
+            ...forecast,
+            ticksLeft: forecast.ticksLeft - 1
+          };
+          if (nextForecasts[stock.symbol].ticksLeft <= 0) {
+            delete nextForecasts[stock.symbol];
+          }
+        }
+
+        if (!hasForecast && currentEvent && ticksLeft <= 12 && ticksLeft > 0) {
           if (!currentEvent.impactSymbol || currentEvent.impactSymbol === stock.symbol) {
             trend = currentEvent.impactType === 'positive' ? 0.03 : -0.03;
             volatility *= currentEvent.impactMultiplier;
           }
         }
+
         const baseDrift = (volatility * volatility) / 2 + 0.001; // Offset volatility drag and add a slight positive growth trend
-        const changePercent = (Math.random() - 0.5) * 2 * volatility + trend + baseDrift;
+        let randomFactor = (Math.random() - 0.5) * 2 * volatility;
+        if (hasForecast) {
+          if (forecast.direction === 'up') {
+            randomFactor = (Math.random() - 0.15) * 1.3 * volatility;
+          } else {
+            randomFactor = (Math.random() - 0.85) * 1.3 * volatility;
+          }
+        }
+
+        const changePercent = randomFactor + trend + baseDrift;
         const newPrice = Math.max(1, stock.price * (1 + changePercent));
         const newHistory = [...stock.history, newPrice].slice(-50);
         return { ...stock, price: newPrice, history: newHistory };
@@ -367,6 +401,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         news: newNews,
         activeEvent: ticksLeft > 1 ? activeEventId : null,
         eventTicksLeft: Math.max(0, ticksLeft - 1),
+        activeForecasts: nextForecasts
       };
     });
   }, []);
@@ -427,6 +462,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const bizState = bizStates[id] || { level: 1, upgrades: [] };
       const currentLevel = bizState.level;
       
+      // Cap business level at 20
+      if (currentLevel >= 20) return prev;
+      
       // Calculate level upgrade cost: baseCost * (1.6 ^ level)
       const upgradeCost = Math.round(business.baseCost * Math.pow(1.6, currentLevel));
       
@@ -473,6 +511,55 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const upgradeClick = () => {
+    setState((prev) => {
+      const clickLvl = prev.clickLevel || 1;
+      const upgradeCost = Math.round(100 * Math.pow(1.8, clickLvl - 1));
+      if (prev.cash < upgradeCost) return prev;
+      return {
+        ...prev,
+        cash: prev.cash - upgradeCost,
+        clickLevel: clickLvl + 1
+      };
+    });
+  };
+
+  const buyStockForecast = (symbol: string) => {
+    setState((prev) => {
+      const stock = prev.stocks.find((s) => s.symbol === symbol);
+      if (!stock) return prev;
+      
+      // Forecast cost: 3 times the stock price, minimum $100
+      const cost = Math.max(100, Math.round(stock.price * 3));
+      if (prev.cash < cost) return prev;
+      
+      const forecasts = prev.activeForecasts || {};
+      // 65% chance of growth, 35% decline
+      const direction: 'up' | 'down' = Math.random() > 0.35 ? 'up' : 'down';
+      
+      const updatedForecasts = {
+        ...forecasts,
+        [symbol]: {
+          direction,
+          ticksLeft: 15
+        }
+      };
+      
+      const newsItem: NewsItem = {
+        ru: `[АНАЛИТИКА]: Получен прогноз для ${stock.symbol}. Ожидается ${direction === 'up' ? 'рост' : 'падение'} актива.`,
+        en: `[ANALYTICS]: Forecast purchased for ${stock.symbol}. ${direction === 'up' ? 'Growth' : 'Decline'} expected.`
+      };
+      const updatedNews = [newsItem, ...prev.news].slice(0, 5);
+      
+      return {
+        ...prev,
+        cash: prev.cash - cost,
+        activeForecasts: updatedForecasts,
+        news: updatedNews
+      };
+    });
+  };
+
   const buyLuxuryAsset = (id: string) => {
     setState((prev) => {
       const asset = prev.luxuryAssets.find((a) => a.id === id);
@@ -481,12 +568,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const addCash = (amount: number) => setState(prev => ({ ...prev, cash: prev.cash + amount }));
+  const addCash = (amount: number) => setState(prev => {
+    // Scale clicker earnings with clickLevel
+    const reward = amount === 10 ? (10 + ((prev.clickLevel || 1) - 1) * 15) : amount;
+    return { ...prev, cash: prev.cash + reward };
+  });
   const resetGame = () => setState(INITIAL_STATE);
   const setLanguage = (lang: 'ru' | 'en') => setState(prev => ({ ...prev, language: lang }));
 
   return (
-    <GameContext.Provider value={{ ...state, buyStock, sellStock, buyBusiness, upgradeBusinessLevel, buyBusinessUpgrade, buyLuxuryAsset, addCash, resetGame, setLanguage, user, login, logout, serverUrl, setServerUrl }}>
+    <GameContext.Provider value={{ ...state, buyStock, sellStock, buyBusiness, upgradeBusinessLevel, buyBusinessUpgrade, upgradeClick, buyStockForecast, buyLuxuryAsset, addCash, resetGame, setLanguage, user, login, logout, serverUrl, setServerUrl }}>
       {children}
     </GameContext.Provider>
   );
