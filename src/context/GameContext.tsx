@@ -18,7 +18,7 @@ interface GameContextType extends GameState {
 }
 
 
-const generateMockHistory = (initialPrice: number, volatility: number, length = 15): number[] => {
+const generateMockHistory = (initialPrice: number, volatility: number, length = 50): number[] => {
   const history: number[] = [];
   let currentPrice = initialPrice;
   for (let i = 0; i < length; i++) {
@@ -185,9 +185,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           const mergedStocks = (data.stocks || INITIAL_STOCKS).map((stock: any) => {
             const initial = INITIAL_STOCKS.find(s => s.symbol === stock.symbol);
-            const history = Array.isArray(stock.history) && stock.history.length >= 2
-              ? stock.history
-              : (initial ? initial.history : [stock.price]);
+            let history = Array.isArray(stock.history) ? stock.history : [];
+            if (history.length < 50) {
+              const needed = 50 - history.length;
+              const startVal = history[0] || stock.price;
+              const mockPad = generateMockHistory(startVal, initial?.volatility || 0.03, needed + 1);
+              history = [...mockPad.slice(0, -1), ...history];
+            }
             return {
               ...stock,
               history: history,
@@ -266,7 +270,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const baseDrift = (volatility * volatility) / 2 + 0.001; // Offset volatility drag and add a slight positive growth trend
         const changePercent = (Math.random() - 0.5) * 2 * volatility + trend + baseDrift;
         const newPrice = Math.max(1, stock.price * (1 + changePercent));
-        const newHistory = [...stock.history, newPrice].slice(-20);
+        const newHistory = [...stock.history, newPrice].slice(-50);
         return { ...stock, price: newPrice, history: newHistory };
       });
 

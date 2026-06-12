@@ -49,6 +49,7 @@ const TRANSLATIONS = {
     low: 'Минимум',
     avg: 'Средняя',
     volatility: 'Волатильность',
+    viewFullChart: 'Смотреть полный график',
   },
   en: {
     title: 'InvestSim',
@@ -94,20 +95,22 @@ const TRANSLATIONS = {
     low: 'Low',
     avg: 'Average',
     volatility: 'Volatility',
+    viewFullChart: 'View Full Chart',
   }
 };
 
 const Sparkline = ({ history, isUp }: { history: number[]; isUp: boolean }) => {
   if (history.length < 2) return null;
-  const min = Math.min(...history);
-  const max = Math.max(...history);
+  const sparkHistory = history.slice(-15);
+  const min = Math.min(...sparkHistory);
+  const max = Math.max(...sparkHistory);
   const range = max - min === 0 ? 1 : max - min;
   
   const width = 100;
   const height = 30;
   
-  const points = history.map((val, idx) => {
-    const x = (idx / (history.length - 1)) * width;
+  const points = sparkHistory.map((val, idx) => {
+    const x = (idx / (sparkHistory.length - 1)) * width;
     const y = 2 + (height - 4) - ((val - min) / range) * (height - 4);
     return `${x},${y}`;
   }).join(' ');
@@ -133,9 +136,11 @@ const Sparkline = ({ history, isUp }: { history: number[]; isUp: boolean }) => {
 const StockDetailsModal = ({
   symbol,
   onClose,
+  onOpenFullChart,
 }: {
   symbol: string;
   onClose: () => void;
+  onOpenFullChart: (symbol: string) => void;
 }) => {
   const { stocks, ownedStocks, cash, buyStock, sellStock, language } = useGame();
   const stock = stocks.find(s => s.symbol === symbol);
@@ -144,7 +149,8 @@ const StockDetailsModal = ({
   if (!stock) return null;
 
   const t = TRANSLATIONS[language];
-  const history = stock.history;
+  // In the compact details modal, show the last 20 ticks
+  const history = stock.history.slice(-20);
   const isUp = history.length > 1 && stock.price >= history[history.length - 2];
   const color = isUp ? '#4ecca3' : '#e94560';
 
@@ -344,6 +350,33 @@ const StockDetailsModal = ({
             )}
           </div>
 
+          <button 
+            onClick={() => {
+              onClose();
+              onOpenFullChart(symbol);
+            }}
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'var(--accent-color)',
+              width: '100%',
+              padding: '10px 0',
+              borderRadius: '8px',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              marginBottom: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'background-color 0.2s, transform 0.1s'
+            }}
+            className="view-full-chart-btn"
+          >
+            📈 {t.viewFullChart}
+          </button>
+
           <div className="detailed-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
             {statsList.map((stat, i) => (
               <div key={i} className="detail-stat-card" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '10px', borderRadius: '6px', textAlign: 'left' }}>
@@ -383,6 +416,307 @@ const StockDetailsModal = ({
   );
 };
 
+const StockFullChartModal = ({
+  symbol,
+  onClose,
+}: {
+  symbol: string;
+  onClose: () => void;
+}) => {
+  const { stocks, ownedStocks, cash, buyStock, sellStock, language } = useGame();
+  const stock = stocks.find(s => s.symbol === symbol);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [timeframe, setTimeframe] = useState<15 | 30 | 50>(50);
+
+  if (!stock) return null;
+
+  const t = TRANSLATIONS[language];
+  const fullHistory = stock.history;
+  const history = fullHistory.slice(-timeframe);
+  const isUp = history.length > 1 && stock.price >= history[history.length - 2];
+  const color = isUp ? '#4ecca3' : '#e94560';
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', { style: 'currency', currency: 'USD' }).format(val);
+  };
+
+  const getName = (name: string) => {
+    const parts = name.split(' / ');
+    return language === 'ru' ? (parts[1] || parts[0]) : parts[0];
+  };
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const avg = history.reduce((a, b) => a + b, 0) / history.length;
+  const range = max - min === 0 ? 1 : max - min;
+
+  const width = 800;
+  const height = 300;
+  const paddingLeft = 65;
+  const paddingRight = 20;
+  const paddingTop = 25;
+  const paddingBottom = 35;
+
+  const points = history.map((val, idx) => {
+    const x = paddingLeft + (idx / (history.length - 1)) * (width - paddingLeft - paddingRight);
+    const y = paddingTop + (height - paddingTop - paddingBottom) - ((val - min) / range) * (height - paddingTop - paddingBottom);
+    return { x, y, val, idx };
+  });
+
+  const linePath = points.map(p => `${p.x},${p.y}`).join(' ');
+
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+  const areaPath = `${firstPoint.x},${height - paddingBottom} ${linePath} ${lastPoint.x},${height - paddingBottom}`;
+
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const innerWidth = rect.width * ((width - paddingLeft - paddingRight) / width);
+    const startX = rect.width * (paddingLeft / width);
+    const relativeX = clientX - startX;
+    const pct = relativeX / innerWidth;
+    const idx = Math.min(
+      history.length - 1,
+      Math.max(0, Math.round(pct * (history.length - 1)))
+    );
+    setHoveredIndex(idx);
+  };
+
+  const handlePointerLeave = () => {
+    setHoveredIndex(null);
+  };
+
+  const startPrice = history[0];
+  const endPrice = stock.price;
+  const totalChange = endPrice - startPrice;
+  const totalChangePercent = (totalChange / startPrice) * 100;
+
+  const statsList = [
+    { label: t.high, value: formatCurrency(max) },
+    { label: t.low, value: formatCurrency(min) },
+    { label: t.avg, value: formatCurrency(avg) },
+    { label: t.volatility, value: `${(stock.volatility * 100).toFixed(1)}%` },
+  ];
+
+  const yLabelsCount = 5;
+  const yLabels = Array.from({ length: yLabelsCount }).map((_, i) => {
+    const ratio = i / (yLabelsCount - 1);
+    const val = max - ratio * range;
+    const y = paddingTop + ratio * (height - paddingTop - paddingBottom);
+    return { val, y };
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2010 }}>
+      <div className="card modal-content stock-details-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '850px', width: '95%', maxHeight: '95vh', overflowY: 'auto' }}>
+        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
+          <div className="modal-title-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="stock-symbol-badge" style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>{stock.symbol}</span>
+            <h3 style={{ margin: 0 }}>{getName(stock.name)} — {language === 'ru' ? 'Полный график' : 'Full Chart'}</h3>
+          </div>
+          <button className="close-modal-btn" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '5px' }}>✕</button>
+        </div>
+
+        <div className="modal-body" style={{ width: '100%' }}>
+          <div className="modal-price-overview" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '15px' }}>
+            <div className="modal-current-price" style={{ fontSize: '2.2rem', fontWeight: 800 }}>{formatCurrency(stock.price)}</div>
+            <div className={`modal-price-change ${totalChange >= 0 ? 'up' : 'down'}`} style={{ fontSize: '1.2rem', fontWeight: 700, color: totalChange >= 0 ? '#4ecca3' : '#e94560' }}>
+              {totalChange >= 0 ? '+' : ''}{formatCurrency(totalChange)} ({totalChange >= 0 ? '+' : ''}{totalChangePercent.toFixed(2)}%)
+            </div>
+          </div>
+
+          <div className="timeframe-selector" style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+            {([15, 30, 50] as const).map(tf => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                style={{
+                  backgroundColor: timeframe === tf ? 'var(--accent-color)' : 'rgba(255,255,255,0.05)',
+                  border: 'none',
+                  color: timeframe === tf ? 'var(--primary-color)' : '#bdc3c7',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  width: 'auto',
+                  margin: 0
+                }}
+              >
+                {tf} {language === 'ru' ? 'тиков' : 'ticks'}
+              </button>
+            ))}
+          </div>
+
+          <div className="detailed-chart-container" style={{ position: 'relative', width: '100%', marginBottom: '25px', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '8px', padding: '15px 0 10px 0' }}>
+            <svg 
+              width="100%" 
+              height={height} 
+              viewBox={`0 0 ${width} ${height}`} 
+              preserveAspectRatio="none"
+              onPointerMove={handlePointerMove}
+              onPointerLeave={handlePointerLeave}
+              style={{ overflow: 'visible', cursor: 'crosshair', display: 'block' }}
+            >
+              <defs>
+                <linearGradient id="full-gradient-up" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4ecca3" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#4ecca3" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="full-gradient-down" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#e94560" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#e94560" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {yLabels.map((lbl, idx) => (
+                <g key={idx}>
+                  <line 
+                    x1={paddingLeft} 
+                    y1={lbl.y} 
+                    x2={width - paddingRight} 
+                    y2={lbl.y} 
+                    stroke="rgba(255,255,255,0.04)" 
+                    strokeDasharray="4,4" 
+                  />
+                  <text 
+                    x={paddingLeft - 8} 
+                    y={lbl.y + 4} 
+                    fill="#94a3b8" 
+                    fontSize="11" 
+                    fontWeight="500" 
+                    textAnchor="end"
+                  >
+                    {formatCurrency(lbl.val)}
+                  </text>
+                </g>
+              ))}
+
+              <text x={paddingLeft} y={height - 8} fill="#64748b" fontSize="10" fontWeight="600" textAnchor="start">
+                -{timeframe}s
+              </text>
+              <text x={paddingLeft + (width - paddingLeft - paddingRight) / 2} y={height - 8} fill="#64748b" fontSize="10" fontWeight="600" textAnchor="middle">
+                -{Math.floor(timeframe / 2)}s
+              </text>
+              <text x={width - paddingRight} y={height - 8} fill="#64748b" fontSize="10" fontWeight="600" textAnchor="end">
+                {t.close}
+              </text>
+
+              <polygon
+                fill={`url(#${isUp ? 'full-gradient-up' : 'full-gradient-down'})`}
+                points={areaPath}
+              />
+
+              <polyline
+                fill="none"
+                stroke={color}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={linePath}
+              />
+
+              {hoveredIndex !== null && points[hoveredIndex] && (
+                <>
+                  <line
+                    x1={points[hoveredIndex].x}
+                    y1={paddingTop}
+                    x2={points[hoveredIndex].x}
+                    y2={height - paddingBottom}
+                    stroke="rgba(255,255,255,0.2)"
+                    strokeWidth="1.5"
+                    strokeDasharray="3,3"
+                  />
+                  <line
+                    x1={paddingLeft}
+                    y1={points[hoveredIndex].y}
+                    x2={width - paddingRight}
+                    y2={points[hoveredIndex].y}
+                    stroke="rgba(255,255,255,0.15)"
+                    strokeWidth="1.2"
+                    strokeDasharray="3,3"
+                  />
+                  <circle
+                    cx={points[hoveredIndex].x}
+                    cy={points[hoveredIndex].y}
+                    r="7"
+                    fill={color}
+                    stroke="#ffffff"
+                    strokeWidth="2.5"
+                  />
+                </>
+              )}
+            </svg>
+            
+            {hoveredIndex !== null && points[hoveredIndex] && (
+              <div 
+                className="chart-tooltip"
+                style={{
+                  position: 'absolute',
+                  top: '-15px',
+                  left: `${(points[hoveredIndex].x / width) * 100}%`,
+                  transform: `translateX(-50%)`,
+                  backgroundColor: '#0a0a14',
+                  border: `2px solid ${color}`,
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
+                  color: '#fff',
+                  zIndex: 10
+                }}
+              >
+                <div className="tooltip-price" style={{ fontSize: '1rem', color: color }}>{formatCurrency(points[hoveredIndex].val)}</div>
+                <div className="tooltip-time" style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500, marginTop: '2px' }}>
+                  {hoveredIndex === history.length - 1 ? t.close : `-${history.length - 1 - hoveredIndex}s`}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="detailed-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '25px' }}>
+            {statsList.map((stat, i) => (
+              <div key={i} className="detail-stat-card" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', textAlign: 'left' }}>
+                <div className="detail-stat-label" style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>{stat.label}</div>
+                <div className="detail-stat-value" style={{ fontSize: '1.15rem', fontWeight: 800 }}>{stat.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="modal-trade-section" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+            <div className="trade-info-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#94a3b8', marginBottom: '15px' }}>
+              <span>{t.inStock}: <strong style={{ color: '#fff' }}>{ownedStocks[stock.symbol] || 0}</strong></span>
+              <span>{t.balance}: <strong style={{ color: '#fff' }}>{formatCurrency(cash)}</strong></span>
+            </div>
+            <div className="trade-actions-row" style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => buyStock(stock.symbol, 1)} 
+                disabled={cash < stock.price} 
+                className="buy-btn"
+                style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: 700 }}
+              >
+                {t.buy} 1
+              </button>
+              <button 
+                onClick={() => sellStock(stock.symbol, 1)} 
+                disabled={(ownedStocks[stock.symbol] || 0) <= 0} 
+                className="sell-btn"
+                style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: 700 }}
+              >
+                {t.sell} 1
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [view, setView] = useState<View>('dashboard');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -392,6 +726,7 @@ function App() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedStockSymbol, setSelectedStockSymbol] = useState<string | null>(null);
+  const [selectedFullChartSymbol, setSelectedFullChartSymbol] = useState<string | null>(null);
 
   const { cash, netWorth, stocks, ownedStocks, businesses, ownedBusinesses, luxuryAssets, ownedLuxuryAssets, news, language, user, login, logout, buyStock, sellStock, buyBusiness, buyLuxuryAsset, addCash, resetGame, setLanguage, serverUrl } = useGame();
 
@@ -547,6 +882,7 @@ function App() {
                       <div className="item-actions">
                         <button onClick={() => buyStock(stock.symbol, 1)} disabled={cash < stock.price} className="buy-btn">{t.buy} 1</button>
                         <button onClick={() => sellStock(stock.symbol, 1)} disabled={(ownedStocks[stock.symbol] || 0) <= 0} className="sell-btn">{t.sell} 1</button>
+                        <button onClick={() => setSelectedFullChartSymbol(stock.symbol)} className="chart-btn" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#bdc3c7', padding: '8px 12px', borderRadius: '8px', fontSize: '0.9rem', cursor: 'pointer' }} title={t.viewFullChart}>📈</button>
                       </div>
                       <div className="in-stock-label">{t.inStock}: {ownedStocks[stock.symbol] || 0}</div>
                     </div>
@@ -716,6 +1052,14 @@ function App() {
         <StockDetailsModal
           symbol={selectedStockSymbol}
           onClose={() => setSelectedStockSymbol(null)}
+          onOpenFullChart={(symbol) => setSelectedFullChartSymbol(symbol)}
+        />
+      )}
+
+      {selectedFullChartSymbol && (
+        <StockFullChartModal
+          symbol={selectedFullChartSymbol}
+          onClose={() => setSelectedFullChartSymbol(null)}
         />
       )}
     </div>
