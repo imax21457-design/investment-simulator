@@ -276,6 +276,11 @@ function App() {
                 const owned = ownedLuxuryAssets.includes(asset.id);
                 return (
                   <div key={asset.id} className="card luxury-card-item">
+                    {asset.image && (
+                      <div className="luxury-image-container">
+                        <img src={asset.image} alt={getName(asset.name)} className="luxury-image" />
+                      </div>
+                    )}
                     <div className="luxury-info">
                       <strong>{getName(asset.name)}</strong>
                       <div className="luxury-category">{t.category}: {asset.category === 'Real Estate' ? t.realEstate : t.transport}</div>

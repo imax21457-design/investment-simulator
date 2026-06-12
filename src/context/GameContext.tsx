@@ -50,18 +50,18 @@ const INITIAL_BUSINESSES: Business[] = [
 ];
 
 const INITIAL_LUXURY_ASSETS: LuxuryAsset[] = [
-  { id: 'l1', name: 'Mountain Bike / Горный велосипед', cost: 500, category: 'Transport' },
-  { id: 'l2', name: 'Designer Watch / Дизайнерские часы', cost: 2000, category: 'Transport' },
-  { id: 'l3', name: 'Used Sedan / Подержанный седан', cost: 5000, category: 'Transport' },
-  { id: 'l4', name: 'Diamond Ring / Кольцо с бриллиантом', cost: 15000, category: 'Transport' },
-  { id: 'l5', name: 'Sports Car / Спорткар', cost: 100000, category: 'Transport' },
-  { id: 'l6', name: 'City Apartment / Квартира в городе', cost: 150000, category: 'Real Estate' },
-  { id: 'l7', name: 'Luxury Yacht / Роскошная яхта', cost: 500000, category: 'Transport' },
-  { id: 'l8', name: 'Ocean Penthouse / Пентхаус у океана', cost: 1000000, category: 'Real Estate' },
-  { id: 'l9', name: 'Luxury Villa / Роскошная вилла', cost: 5000000, category: 'Real Estate' },
-  { id: 'l10', name: 'Private Jet / Личный самолет', cost: 25000000, category: 'Transport' },
-  { id: 'l11', name: 'Superyacht / Суперяхта', cost: 100000000, category: 'Transport' },
-  { id: 'l12', name: 'Private Island / Частный остров', cost: 500000000, category: 'Real Estate' },
+  { id: 'l1', name: 'Mountain Bike / Горный велосипед', cost: 500, category: 'Transport', image: '/images/bike.jpg' },
+  { id: 'l2', name: 'Designer Watch / Дизайнерские часы', cost: 2000, category: 'Transport', image: '/images/watch.jpg' },
+  { id: 'l3', name: 'Used Sedan / Подержанный седан', cost: 5000, category: 'Transport', image: '/images/sedan.jpg' },
+  { id: 'l4', name: 'Diamond Ring / Кольцо с бриллиантом', cost: 15000, category: 'Transport', image: '/images/ring.jpg' },
+  { id: 'l5', name: 'Sports Car / Спорткар', cost: 100000, category: 'Transport', image: '/images/sportscar.jpg' },
+  { id: 'l6', name: 'City Apartment / Квартира в городе', cost: 150000, category: 'Real Estate', image: '/images/apartment.jpg' },
+  { id: 'l7', name: 'Luxury Yacht / Роскошная яхта', cost: 500000, category: 'Transport', image: '/images/yacht.jpg' },
+  { id: 'l8', name: 'Ocean Penthouse / Пентхаус у океана', cost: 1000000, category: 'Real Estate', image: '/images/penthouse.jpg' },
+  { id: 'l9', name: 'Luxury Villa / Роскошная вилла', cost: 5000000, category: 'Real Estate', image: '/images/villa.jpg' },
+  { id: 'l10', name: 'Private Jet / Личный самолет', cost: 25000000, category: 'Transport', image: '/images/jet.jpg' },
+  { id: 'l11', name: 'Superyacht / Суперяхта', cost: 100000000, category: 'Transport', image: '/images/superyacht.jpg' },
+  { id: 'l12', name: 'Private Island / Частный остров', cost: 500000000, category: 'Real Estate', image: '/images/island.jpg' },
 ];
 
 interface NewsEvent {
