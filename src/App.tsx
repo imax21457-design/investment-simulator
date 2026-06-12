@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import { useGame } from './context/GameContext';
 
@@ -43,6 +43,12 @@ const TRANSLATIONS = {
     balance: 'Баланс счета',
     cardHolder: 'ВЛАДЕЛЕЦ КАРТЫ',
     settings: 'Настройки',
+    stockDetails: 'Детали акции',
+    close: 'Закрыть',
+    high: 'Максимум',
+    low: 'Минимум',
+    avg: 'Средняя',
+    volatility: 'Волатильность',
   },
   en: {
     title: 'InvestSim',
@@ -82,6 +88,12 @@ const TRANSLATIONS = {
     balance: 'Account Balance',
     cardHolder: 'CARD HOLDER',
     settings: 'Settings',
+    stockDetails: 'Stock Details',
+    close: 'Close',
+    high: 'High',
+    low: 'Low',
+    avg: 'Average',
+    volatility: 'Volatility',
   }
 };
 
@@ -118,6 +130,259 @@ const Sparkline = ({ history, isUp }: { history: number[]; isUp: boolean }) => {
   );
 };
 
+const StockDetailsModal = ({
+  symbol,
+  onClose,
+}: {
+  symbol: string;
+  onClose: () => void;
+}) => {
+  const { stocks, ownedStocks, cash, buyStock, sellStock, language } = useGame();
+  const stock = stocks.find(s => s.symbol === symbol);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  if (!stock) return null;
+
+  const t = TRANSLATIONS[language];
+  const history = stock.history;
+  const isUp = history.length > 1 && stock.price >= history[history.length - 2];
+  const color = isUp ? '#4ecca3' : '#e94560';
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', { style: 'currency', currency: 'USD' }).format(val);
+  };
+
+  const getName = (name: string) => {
+    const parts = name.split(' / ');
+    return language === 'ru' ? (parts[1] || parts[0]) : parts[0];
+  };
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const avg = history.reduce((a, b) => a + b, 0) / history.length;
+  const range = max - min === 0 ? 1 : max - min;
+
+  const width = 500;
+  const height = 180;
+  const padding = 20;
+
+  const points = history.map((val, idx) => {
+    const x = padding + (idx / (history.length - 1)) * (width - padding * 2);
+    const y = padding + (height - padding * 2) - ((val - min) / range) * (height - padding * 2);
+    return { x, y, val, idx };
+  });
+
+  const linePath = points.map(p => `${p.x},${p.y}`).join(' ');
+
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+  const areaPath = `${firstPoint.x},${height - padding} ${linePath} ${lastPoint.x},${height - padding}`;
+
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const innerWidth = rect.width - (padding * 2 * (rect.width / width));
+    const startX = padding * (rect.width / width);
+    const relativeX = clientX - startX;
+    const pct = relativeX / innerWidth;
+    const idx = Math.min(
+      history.length - 1,
+      Math.max(0, Math.round(pct * (history.length - 1)))
+    );
+    setHoveredIndex(idx);
+  };
+
+  const handlePointerLeave = () => {
+    setHoveredIndex(null);
+  };
+
+  const startPrice = history[0];
+  const endPrice = stock.price;
+  const totalChange = endPrice - startPrice;
+  const totalChangePercent = (totalChange / startPrice) * 100;
+
+  const statsList = [
+    { label: t.high, value: formatCurrency(max) },
+    { label: t.low, value: formatCurrency(min) },
+    { label: t.avg, value: formatCurrency(avg) },
+    { label: t.volatility, value: `${(stock.volatility * 100).toFixed(1)}%` },
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+      <div className="card modal-content stock-details-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
+          <div className="modal-title-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="stock-symbol-badge" style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>{stock.symbol}</span>
+            <h3 style={{ margin: 0 }}>{getName(stock.name)}</h3>
+          </div>
+          <button className="close-modal-btn" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '5px' }}>✕</button>
+        </div>
+
+        <div className="modal-body" style={{ width: '100%' }}>
+          <div className="modal-price-overview" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+            <div className="modal-current-price" style={{ fontSize: '1.8rem', fontWeight: 800 }}>{formatCurrency(stock.price)}</div>
+            <div className={`modal-price-change ${totalChange >= 0 ? 'up' : 'down'}`} style={{ fontSize: '1.05rem', fontWeight: 700, color: totalChange >= 0 ? '#4ecca3' : '#e94560' }}>
+              {totalChange >= 0 ? '+' : ''}{formatCurrency(totalChange)} ({totalChange >= 0 ? '+' : ''}{totalChangePercent.toFixed(2)}%)
+            </div>
+          </div>
+
+          <div className="detailed-chart-container" style={{ position: 'relative', width: '100%', marginBottom: '20px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '10px 0' }}>
+            <svg 
+              width="100%" 
+              height={height} 
+              viewBox={`0 0 ${width} ${height}`} 
+              preserveAspectRatio="none"
+              onPointerMove={handlePointerMove}
+              onPointerLeave={handlePointerLeave}
+              style={{ overflow: 'visible', cursor: 'crosshair', display: 'block' }}
+            >
+              <defs>
+                <linearGradient id="gradient-up" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4ecca3" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#4ecca3" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="gradient-down" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#e94560" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#e94560" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Horizontal gridlines */}
+              <line 
+                x1={padding} 
+                y1={padding} 
+                x2={width - padding} 
+                y2={padding} 
+                stroke="rgba(255,255,255,0.05)" 
+                strokeDasharray="4,4" 
+              />
+              <line 
+                x1={padding} 
+                y1={height / 2} 
+                x2={width - padding} 
+                y2={height / 2} 
+                stroke="rgba(255,255,255,0.05)" 
+                strokeDasharray="4,4" 
+              />
+              <line 
+                x1={padding} 
+                y1={height - padding} 
+                x2={width - padding} 
+                y2={height - padding} 
+                stroke="rgba(255,255,255,0.05)" 
+                strokeDasharray="4,4" 
+              />
+
+              {/* Area under the path */}
+              <polygon
+                fill={`url(#${isUp ? 'gradient-up' : 'gradient-down'})`}
+                points={areaPath}
+              />
+
+              {/* Main polyline */}
+              <polyline
+                fill="none"
+                stroke={color}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={linePath}
+              />
+
+              {/* Hover interactions */}
+              {hoveredIndex !== null && points[hoveredIndex] && (
+                <>
+                  <line
+                    x1={points[hoveredIndex].x}
+                    y1={padding}
+                    x2={points[hoveredIndex].x}
+                    y2={height - padding}
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeWidth="1.5"
+                    strokeDasharray="3,3"
+                  />
+                  <circle
+                    cx={points[hoveredIndex].x}
+                    cy={points[hoveredIndex].y}
+                    r="6"
+                    fill={color}
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                  />
+                </>
+              )}
+            </svg>
+            
+            {/* Tooltip display */}
+            {hoveredIndex !== null && points[hoveredIndex] && (
+              <div 
+                className="chart-tooltip"
+                style={{
+                  position: 'absolute',
+                  top: '-15px',
+                  left: `${(points[hoveredIndex].x / width) * 100}%`,
+                  transform: `translateX(-50%)`,
+                  backgroundColor: '#0f3460',
+                  border: `1.5px solid ${color}`,
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  pointerEvents: 'none',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                  color: '#fff',
+                  zIndex: 10
+                }}
+              >
+                <div className="tooltip-price" style={{ fontSize: '0.85rem' }}>{formatCurrency(points[hoveredIndex].val)}</div>
+                <div className="tooltip-time" style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: 500 }}>
+                  {hoveredIndex === history.length - 1 ? t.close : `-${history.length - 1 - hoveredIndex}s`}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="detailed-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '20px' }}>
+            {statsList.map((stat, i) => (
+              <div key={i} className="detail-stat-card" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '10px', borderRadius: '6px', textAlign: 'left' }}>
+                <div className="detail-stat-label" style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>{stat.label}</div>
+                <div className="detail-stat-value" style={{ fontSize: '1rem', fontWeight: 700 }}>{stat.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="modal-trade-section" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '15px' }}>
+            <div className="trade-info-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '12px' }}>
+              <span>{t.inStock}: <strong style={{ color: '#fff' }}>{ownedStocks[stock.symbol] || 0}</strong></span>
+              <span>{t.balance}: <strong style={{ color: '#fff' }}>{formatCurrency(cash)}</strong></span>
+            </div>
+            <div className="trade-actions-row" style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => buyStock(stock.symbol, 1)} 
+                disabled={cash < stock.price} 
+                className="buy-btn"
+                style={{ flex: 1, padding: '12px 0', fontSize: '0.95rem', fontWeight: 700 }}
+              >
+                {t.buy} 1
+              </button>
+              <button 
+                onClick={() => sellStock(stock.symbol, 1)} 
+                disabled={(ownedStocks[stock.symbol] || 0) <= 0} 
+                className="sell-btn"
+                style={{ flex: 1, padding: '12px 0', fontSize: '0.95rem', fontWeight: 700 }}
+              >
+                {t.sell} 1
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [view, setView] = useState<View>('dashboard');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -126,6 +391,7 @@ function App() {
   const [error, setError] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedStockSymbol, setSelectedStockSymbol] = useState<string | null>(null);
 
   const { cash, netWorth, stocks, ownedStocks, businesses, ownedBusinesses, luxuryAssets, ownedLuxuryAssets, news, language, user, login, logout, buyStock, sellStock, buyBusiness, buyLuxuryAsset, addCash, resetGame, setLanguage, serverUrl } = useGame();
 
@@ -237,7 +503,7 @@ function App() {
                 if (qty === 0) return null;
                 const stock = stocks.find(s => s.symbol === symbol);
                 return (
-                  <div key={symbol} className="stock-item">
+                  <div key={symbol} className="stock-item" onClick={() => setSelectedStockSymbol(symbol)} style={{ cursor: 'pointer' }}>
                     <div className="portfolio-stock-info">
                       <strong className="portfolio-stock-name">{getName(stock?.name || '')}</strong>
                       <span className="portfolio-stock-qty">{qty} {language === 'ru' ? 'шт.' : 'pcs'} ({symbol})</span>
@@ -265,7 +531,7 @@ function App() {
                 const isUp = stock.history.length > 1 && stock.price >= stock.history[stock.history.length - 2];
                 return (
                   <div key={stock.id} className="card stock-card-item">
-                    <div className="stock-info">
+                    <div className="stock-info" onClick={() => setSelectedStockSymbol(stock.symbol)} style={{ cursor: 'pointer' }}>
                       <div className="stock-name-group">
                         <strong className="stock-name">{getName(stock.name)}</strong>
                         <span className="stock-symbol-badge">{stock.symbol}</span>
@@ -444,6 +710,13 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedStockSymbol && (
+        <StockDetailsModal
+          symbol={selectedStockSymbol}
+          onClose={() => setSelectedStockSymbol(null)}
+        />
       )}
     </div>
   );

@@ -879,3 +879,27 @@ button:disabled {
     font-size: 0.9rem;
   }
 }
+
+/* Stock Details Modal styles */
+.stock-details-modal {
+  background: rgba(26, 26, 46, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6) !important;
+}
+
+.chart-tooltip {
+  transition: left 0.08s ease-out;
+}
+
+.detailed-chart-container svg {
+  pointer-events: auto !important;
+}
+
+.detail-stat-card {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.detail-stat-card:hover {
+  transform: translateY(-2px);
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
