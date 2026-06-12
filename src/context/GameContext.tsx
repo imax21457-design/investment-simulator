@@ -18,22 +18,33 @@ interface GameContextType extends GameState {
 }
 
 
+const generateMockHistory = (initialPrice: number, volatility: number, length = 15): number[] => {
+  const history: number[] = [];
+  let currentPrice = initialPrice;
+  for (let i = 0; i < length; i++) {
+    history.push(currentPrice);
+    const changePercent = (Math.random() - 0.5) * 2 * volatility;
+    currentPrice = Math.max(1, currentPrice * (1 - changePercent));
+  }
+  return history.reverse();
+};
+
 const INITIAL_STOCKS: Stock[] = [
-  { id: '1', name: 'Fruit Corp / Фрукт Корп', symbol: 'FRT', price: 150, history: [150], volatility: 0.02 },
-  { id: '2', name: 'Macrosoft / Макрософт', symbol: 'MCS', price: 300, history: [300], volatility: 0.015 },
-  { id: '3', name: 'Tesler / Теслер', symbol: 'TSL', price: 700, history: [700], volatility: 0.05 },
-  { id: '4', name: 'Nebula / Небула', symbol: 'NBL', price: 50, history: [50], volatility: 0.08 },
-  { id: '5', name: 'Amaze-on / Амазейзон', symbol: 'AMZ', price: 3200, history: [3200], volatility: 0.025 },
-  { id: '6', name: 'Gugle / Гугл', symbol: 'GGL', price: 2800, history: [2800], volatility: 0.012 },
-  { id: '7', name: 'BioGen / БиоГен', symbol: 'BIO', price: 180, history: [180], volatility: 0.07 },
-  { id: '8', name: 'SolarWave / СоларВейв', symbol: 'SLR', price: 120, history: [120], volatility: 0.045 },
-  { id: '9', name: 'SkyLinks / СкайЛинкс', symbol: 'SKY', price: 95, history: [95], volatility: 0.06 },
-  { id: '10', name: 'Global Bank / Глобал Банк', symbol: 'BNK', price: 420, history: [420], volatility: 0.018 },
-  { id: '11', name: 'Oil King / Нефтяной Король', symbol: 'OIL', price: 80, history: [80], volatility: 0.04 },
-  { id: '12', name: 'Gold Reserve / Золотой Резерв', symbol: 'GOLD', price: 1800, history: [1800], volatility: 0.01 },
-  { id: '13', name: 'SpaceXtra / СпейсЭкстра', symbol: 'SPX', price: 450, history: [450], volatility: 0.12 },
-  { id: '14', name: 'CyberShield / КиберЩит', symbol: 'CYB', price: 210, history: [210], volatility: 0.055 },
-  { id: '15', name: 'EcoFood / ЭкоФуд', symbol: 'ECO', price: 65, history: [65], volatility: 0.035 },
+  { id: '1', name: 'Fruit Corp / Фрукт Корп', symbol: 'FRT', price: 150, history: generateMockHistory(150, 0.02), volatility: 0.02 },
+  { id: '2', name: 'Macrosoft / Макрософт', symbol: 'MCS', price: 300, history: generateMockHistory(300, 0.015), volatility: 0.015 },
+  { id: '3', name: 'Tesler / Теслер', symbol: 'TSL', price: 700, history: generateMockHistory(700, 0.05), volatility: 0.05 },
+  { id: '4', name: 'Nebula / Небула', symbol: 'NBL', price: 50, history: generateMockHistory(50, 0.08), volatility: 0.08 },
+  { id: '5', name: 'Amaze-on / Амазейзон', symbol: 'AMZ', price: 3200, history: generateMockHistory(3200, 0.025), volatility: 0.025 },
+  { id: '6', name: 'Gugle / Гугл', symbol: 'GGL', price: 2800, history: generateMockHistory(2800, 0.012), volatility: 0.012 },
+  { id: '7', name: 'BioGen / БиоГен', symbol: 'BIO', price: 180, history: generateMockHistory(180, 0.07), volatility: 0.07 },
+  { id: '8', name: 'SolarWave / СоларВейв', symbol: 'SLR', price: 120, history: generateMockHistory(120, 0.045), volatility: 0.045 },
+  { id: '9', name: 'SkyLinks / СкайЛинкс', symbol: 'SKY', price: 95, history: generateMockHistory(95, 0.06), volatility: 0.06 },
+  { id: '10', name: 'Global Bank / Глобал Банк', symbol: 'BNK', price: 420, history: generateMockHistory(420, 0.018), volatility: 0.018 },
+  { id: '11', name: 'Oil King / Нефтяной Король', symbol: 'OIL', price: 80, history: generateMockHistory(80, 0.04), volatility: 0.04 },
+  { id: '12', name: 'Gold Reserve / Золотой Резерв', symbol: 'GOLD', price: 1800, history: generateMockHistory(1800, 0.01), volatility: 0.01 },
+  { id: '13', name: 'SpaceXtra / СпейсЭкстра', symbol: 'SPX', price: 450, history: generateMockHistory(450, 0.12), volatility: 0.12 },
+  { id: '14', name: 'CyberShield / КиберЩит', symbol: 'CYB', price: 210, history: generateMockHistory(210, 0.055), volatility: 0.055 },
+  { id: '15', name: 'EcoFood / ЭкоФуд', symbol: 'ECO', price: 65, history: generateMockHistory(65, 0.035), volatility: 0.035 },
 ];
 
 const INITIAL_BUSINESSES: Business[] = [
@@ -172,9 +183,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const staticAsset = INITIAL_LUXURY_ASSETS.find(a => a.id === asset.id);
             return { ...asset, image: staticAsset?.image };
           });
+          const mergedStocks = (data.stocks || INITIAL_STOCKS).map((stock: any) => {
+            const initial = INITIAL_STOCKS.find(s => s.symbol === stock.symbol);
+            const history = Array.isArray(stock.history) && stock.history.length >= 2
+              ? stock.history
+              : (initial ? initial.history : [stock.price]);
+            return {
+              ...stock,
+              history: history,
+              volatility: initial?.volatility || stock.volatility || 0.03
+            };
+          });
           setState({
             ...data,
-            luxuryAssets: mergedLuxuryAssets
+            luxuryAssets: mergedLuxuryAssets,
+            stocks: mergedStocks
           });
         } else {
           throw new Error('Invalid game state format received');

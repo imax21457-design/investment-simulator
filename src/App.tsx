@@ -85,6 +85,39 @@ const TRANSLATIONS = {
   }
 };
 
+const Sparkline = ({ history, isUp }: { history: number[]; isUp: boolean }) => {
+  if (history.length < 2) return null;
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = max - min === 0 ? 1 : max - min;
+  
+  const width = 100;
+  const height = 30;
+  
+  const points = history.map((val, idx) => {
+    const x = (idx / (history.length - 1)) * width;
+    const y = 2 + (height - 4) - ((val - min) / range) * (height - 4);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const strokeColor = isUp ? '#4ecca3' : '#e94560';
+
+  return (
+    <div className="sparkline-container">
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <polyline
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={points}
+        />
+      </svg>
+    </div>
+  );
+};
+
 function App() {
   const [view, setView] = useState<View>('dashboard');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -205,8 +238,17 @@ function App() {
                 const stock = stocks.find(s => s.symbol === symbol);
                 return (
                   <div key={symbol} className="stock-item">
-                    <span>{getName(stock?.name || '')} ({symbol}): {qty}</span>
-                    <span>{formatCurrency((stock?.price || 0) * qty)}</span>
+                    <div className="portfolio-stock-info">
+                      <strong className="portfolio-stock-name">{getName(stock?.name || '')}</strong>
+                      <span className="portfolio-stock-qty">{qty} {language === 'ru' ? 'шт.' : 'pcs'} ({symbol})</span>
+                    </div>
+                    {stock && (
+                      <Sparkline 
+                        history={stock.history} 
+                        isUp={stock.history.length > 1 && stock.price >= stock.history[stock.history.length - 2]} 
+                      />
+                    )}
+                    <span style={{ fontWeight: 700 }}>{formatCurrency((stock?.price || 0) * qty)}</span>
                   </div>
                 );
               })}
@@ -219,23 +261,32 @@ function App() {
           <div className="view">
             <h2>{t.market}</h2>
             <div className="market-grid">
-              {stocks.map(stock => (
-                <div key={stock.id} className="card stock-card-item">
-                  <div className="stock-info">
-                    <strong>{getName(stock.name)} ({stock.symbol})</strong>
-                    <div className={`stock-price ${stock.history.length > 1 && stock.price >= stock.history[stock.history.length - 2] ? 'up' : 'down'}`}>
-                      {formatCurrency(stock.price)}
+              {stocks.map(stock => {
+                const isUp = stock.history.length > 1 && stock.price >= stock.history[stock.history.length - 2];
+                return (
+                  <div key={stock.id} className="card stock-card-item">
+                    <div className="stock-info">
+                      <div className="stock-name-group">
+                        <strong className="stock-name">{getName(stock.name)}</strong>
+                        <span className="stock-symbol-badge">{stock.symbol}</span>
+                      </div>
+                      
+                      <Sparkline history={stock.history} isUp={isUp} />
+
+                      <div className={`stock-price ${isUp ? 'up' : 'down'}`}>
+                        {formatCurrency(stock.price)}
+                      </div>
+                    </div>
+                    <div className="stock-controls">
+                      <div className="item-actions">
+                        <button onClick={() => buyStock(stock.symbol, 1)} disabled={cash < stock.price} className="buy-btn">{t.buy} 1</button>
+                        <button onClick={() => sellStock(stock.symbol, 1)} disabled={(ownedStocks[stock.symbol] || 0) <= 0} className="sell-btn">{t.sell} 1</button>
+                      </div>
+                      <div className="in-stock-label">{t.inStock}: {ownedStocks[stock.symbol] || 0}</div>
                     </div>
                   </div>
-                  <div className="stock-controls">
-                    <div className="item-actions">
-                      <button onClick={() => buyStock(stock.symbol, 1)} disabled={cash < stock.price} className="buy-btn">{t.buy} 1</button>
-                      <button onClick={() => sellStock(stock.symbol, 1)} disabled={(ownedStocks[stock.symbol] || 0) <= 0} className="sell-btn">{t.sell} 1</button>
-                    </div>
-                    <div className="in-stock-label">{t.inStock}: {ownedStocks[stock.symbol] || 0}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );

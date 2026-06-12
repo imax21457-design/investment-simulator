@@ -314,6 +314,28 @@ button:disabled {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.portfolio-stock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 160px;
+  text-align: left;
+}
+
+.portfolio-stock-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portfolio-stock-qty {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
 .stock-item:last-child {
   border-bottom: none;
 }
@@ -334,11 +356,50 @@ button:disabled {
   margin-bottom: 0;
 }
 
-.stock-info, .business-info, .luxury-info {
+.stock-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.business-info, .luxury-info {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
+}
+
+.stock-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  max-width: 140px;
+}
+
+.stock-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.stock-symbol-badge {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.sparkline-container {
+  width: 110px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  max-width: 120px;
 }
 
 .stock-info strong, .business-info strong, .luxury-info strong {
@@ -767,6 +828,16 @@ button:disabled {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+  }
+
+  .stock-name-group {
+    max-width: 100%;
+  }
+
+  .sparkline-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 8px 0;
   }
 
   .stock-price {
