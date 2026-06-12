@@ -719,4 +719,58 @@ button:disabled {
     height: 36px;
     font-size: 1.25rem;
   }
+
+  /* Responsive layout fixes for phone - preventing overlaps */
+  .card, .stock-card-item, .business-card-item, .luxury-card-item {
+    padding: 16px;
+  }
+
+  .stock-card-item, .business-card-item, .luxury-card-item {
+    gap: 14px;
+  }
+
+  .stock-info, .business-info, .luxury-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .stock-price {
+    font-size: 1.15rem;
+  }
+
+  .item-actions {
+    gap: 8px;
+  }
+
+  .item-actions button, .business-controls button, .luxury-controls button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+
+  .stock-item, .business-item, .luxury-item {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px 0;
+  }
+
+  .stock-item span, .business-item span, .luxury-item span {
+    font-size: 0.85rem;
+  }
+
+  .auth-card {
+    padding: 24px 16px;
+    margin: 10px;
+  }
+
+  .auth-card h1 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+
+  .auth-card input {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
 }
