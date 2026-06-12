@@ -168,7 +168,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         if (typeof data === 'object' && 'cash' in data) {
-          setState(data);
+          const mergedLuxuryAssets = (data.luxuryAssets || INITIAL_LUXURY_ASSETS).map((asset: any) => {
+            const staticAsset = INITIAL_LUXURY_ASSETS.find(a => a.id === asset.id);
+            return { ...asset, image: staticAsset?.image };
+          });
+          setState({
+            ...data,
+            luxuryAssets: mergedLuxuryAssets
+          });
         } else {
           throw new Error('Invalid game state format received');
         }
