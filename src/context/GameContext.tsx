@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { GameState, Stock, Business, LuxuryAsset } from '../types';
+import type { GameState, Stock, Business, LuxuryAsset, NewsItem } from '../types';
 import { Capacitor } from '@capacitor/core';
 
 interface GameContextType extends GameState {
@@ -95,7 +95,7 @@ const INITIAL_STATE: GameState = {
   luxuryAssets: INITIAL_LUXURY_ASSETS,
   ownedLuxuryAssets: [],
   tick: 0,
-  news: ["Welcome! / Добро пожаловать!"],
+  news: [{ ru: "Добро пожаловать!", en: "Welcome!" }],
   language: 'ru',
   activeEvent: null,
   eventTicksLeft: 0,
@@ -202,13 +202,24 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const event = NEWS_EVENTS[Math.floor(Math.random() * NEWS_EVENTS.length)];
         activeEventId = event.id;
         ticksLeft = 15; 
-        const msg = prev.language === 'ru' ? `[РЫНОК]: ${event.messageRu}` : `[MARKET]: ${event.messageEn}`;
+        const msg: NewsItem = {
+          ru: `[РЫНОК]: ${event.messageRu}`,
+          en: `[MARKET]: ${event.messageEn}`
+        };
         newNews = [msg, ...newNews].slice(0, 5);
       } else if (Math.random() < 0.1) {
         const fluffRu = ["Аналитики обсуждают новые тренды года.", "Инвесторы следят за открытием торгов в Азии.", "Эксперты советуют диверсифицировать портфель.", "Центральный банк сохраняет ставку без изменений.", "Популярность пассивного дохода продолжает расти."];
         const fluffEn = ["Analysts are discussing new trends of the year.", "Investors are watching Asian markets opening.", "Experts advise on portfolio diversification.", "Central bank keeps interest rate unchanged.", "Popularity of passive income continues to grow."];
-        const msg = prev.language === 'ru' ? fluffRu[Math.floor(Math.random() * fluffRu.length)] : fluffEn[Math.floor(Math.random() * fluffEn.length)];
-        if (newNews[0] !== msg) newNews = [msg, ...newNews].slice(0, 5);
+        const randomIndex = Math.floor(Math.random() * fluffRu.length);
+        const msg: NewsItem = {
+          ru: fluffRu[randomIndex],
+          en: fluffEn[randomIndex]
+        };
+        const latest = newNews[0];
+        const isDuplicate = latest && (typeof latest === 'string' ? latest === msg.ru || latest === msg.en : latest.ru === msg.ru);
+        if (!isDuplicate) {
+          newNews = [msg, ...newNews].slice(0, 5);
+        }
       }
 
       const currentEvent = NEWS_EVENTS.find(e => e.id === activeEventId);

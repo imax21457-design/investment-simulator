@@ -191,7 +191,9 @@ function App() {
               <h3>{t.latestNews}</h3>
               <div className="news-ticker">
                 {news.map((item, i) => (
-                  <div key={i} className="news-item">{item}</div>
+                  <div key={i} className="news-item">
+                    {typeof item === 'string' ? item : (language === 'ru' ? item.ru : item.en)}
+                  </div>
                 ))}
               </div>
             </div>

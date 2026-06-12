@@ -24,6 +24,11 @@ export interface LuxuryAsset {
   image?: string;
 }
 
+export interface NewsItem {
+  ru: string;
+  en: string;
+}
+
 export interface GameState {
   cash: number;
   netWorth: number;
@@ -34,7 +39,7 @@ export interface GameState {
   luxuryAssets: LuxuryAsset[];
   ownedLuxuryAssets: string[]; // ids
   tick: number;
-  news: string[];
+  news: (string | NewsItem)[];
   language: 'ru' | 'en';
   activeEvent: string | null; // id or null
   eventTicksLeft: number;
