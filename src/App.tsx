@@ -8,8 +8,8 @@ const TRANSLATIONS = {
   ru: {
     title: 'ИнвестСим',
     dashboard: 'Кабинет',
-    market: 'Рынок акций',
-    businesses: 'Мой бизнес',
+    market: 'Акции',
+    businesses: 'Бизнес',
     shop: 'Магазин',
     cash: 'Наличные',
     netWorth: 'Капитал',
@@ -47,8 +47,8 @@ const TRANSLATIONS = {
   en: {
     title: 'InvestSim',
     dashboard: 'Dashboard',
-    market: 'Stock Market',
-    businesses: 'Businesses',
+    market: 'Stocks',
+    businesses: 'Business',
     shop: 'Shop',
     cash: 'Cash',
     netWorth: 'Net Worth',
@@ -322,8 +322,16 @@ function App() {
       
       <header className="header">
         <div className="header-stats">
-          <div className="header-stat-item">{t.cash}: <span className="stat-value">{formatCurrency(cash)}</span></div>
-          <div className="header-stat-item">{t.netWorth}: <span className="stat-value">{formatCurrency(netWorth)}</span></div>
+          <div className="header-stat-item">
+            <span className="stat-label-text">{t.cash}:</span>
+            <span className="stat-icon">💵</span>
+            <span className="stat-value">{formatCurrency(cash)}</span>
+          </div>
+          <div className="header-stat-item">
+            <span className="stat-label-text">{t.netWorth}:</span>
+            <span className="stat-icon">💎</span>
+            <span className="stat-value">{formatCurrency(netWorth)}</span>
+          </div>
         </div>
         <button className="settings-toggle-btn" onClick={() => setShowSettings(true)}>⚙️</button>
       </header>
