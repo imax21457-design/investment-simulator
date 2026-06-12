@@ -240,7 +240,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             volatility *= currentEvent.impactMultiplier;
           }
         }
-        const changePercent = (Math.random() - 0.5) * 2 * volatility + trend;
+        const baseDrift = (volatility * volatility) / 2 + 0.001; // Offset volatility drag and add a slight positive growth trend
+        const changePercent = (Math.random() - 0.5) * 2 * volatility + trend + baseDrift;
         const newPrice = Math.max(1, stock.price * (1 + changePercent));
         const newHistory = [...stock.history, newPrice].slice(-20);
         return { ...stock, price: newPrice, history: newHistory };
