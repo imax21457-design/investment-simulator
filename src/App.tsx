@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
-import { useGame } from './context/GameContext';
+import { useGame, BUSINESS_UPGRADES } from './context/GameContext';
 
 type View = 'dashboard' | 'market' | 'businesses' | 'luxury';
 
@@ -50,6 +50,18 @@ const TRANSLATIONS = {
     avg: 'Средняя',
     volatility: 'Волатильность',
     viewFullChart: 'Смотреть полный график',
+    level: 'Уровень',
+    upgrades: 'Улучшения',
+    upgradeLevel: 'Повысить уровень',
+    cost: 'Стоимость',
+    nextLevelIncome: 'Доход на след. уровне',
+    activeUpgrades: 'Куплено улучшений',
+    availableUpgrades: 'Доступные улучшения',
+    buyUpgrade: 'Купить',
+    alreadyPurchased: 'Куплено',
+    businessManagement: 'Управление бизнесом',
+    currentLevel: 'Текущий уровень',
+    multiplier: 'Множитель',
   },
   en: {
     title: 'InvestSim',
@@ -96,6 +108,18 @@ const TRANSLATIONS = {
     avg: 'Average',
     volatility: 'Volatility',
     viewFullChart: 'View Full Chart',
+    level: 'Level',
+    upgrades: 'Upgrades',
+    upgradeLevel: 'Upgrade Level',
+    cost: 'Cost',
+    nextLevelIncome: 'Next Level Income',
+    activeUpgrades: 'Upgrades Owned',
+    availableUpgrades: 'Available Upgrades',
+    buyUpgrade: 'Buy',
+    alreadyPurchased: 'Purchased',
+    businessManagement: 'Business Management',
+    currentLevel: 'Current Level',
+    multiplier: 'Multiplier',
   }
 };
 
@@ -717,6 +741,148 @@ const StockFullChartModal = ({
   );
 };
 
+const BusinessDetailsModal = ({
+  businessId,
+  onClose,
+}: {
+  businessId: string;
+  onClose: () => void;
+}) => {
+  const { cash, businesses, businessStates, upgradeBusinessLevel, buyBusinessUpgrade, language } = useGame();
+  const business = businesses.find(b => b.id === businessId);
+
+  if (!business) return null;
+
+  const t = TRANSLATIONS[language];
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', { style: 'currency', currency: 'USD' }).format(val);
+  };
+
+  const getName = (name: string) => {
+    const parts = name.split(' / ');
+    return language === 'ru' ? (parts[1] || parts[0]) : parts[0];
+  };
+
+  const bizState = (businessStates && businessStates[businessId]) || { level: 1, upgrades: [] };
+  const level = bizState.level;
+  const activeUpgrades = bizState.upgrades;
+
+  // Calculate current income
+  const levelMultiplier = Math.pow(1.3, level - 1);
+  const upgradesList = BUSINESS_UPGRADES[businessId] || [];
+  const upgradesMultiplier = activeUpgrades.reduce((sum, upId) => {
+    const upgradeObj = upgradesList.find(u => u.id === upId);
+    return sum + (upgradeObj ? upgradeObj.incomeMultiplier : 0);
+  }, 1.0);
+  const currentIncome = Math.round(business.incomePerTick * levelMultiplier * upgradesMultiplier);
+
+  // Calculate next level values
+  const nextLevelCost = Math.round(business.baseCost * Math.pow(1.6, level));
+  const nextLevelIncome = Math.round(business.incomePerTick * Math.pow(1.3, level) * upgradesMultiplier);
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+      <div className="card modal-content business-details-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ backgroundColor: 'var(--accent-color)', color: '#1a1a2e', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 700 }}>{t.level} {level}</span>
+            <h3 style={{ margin: 0 }}>{getName(business.name)}</h3>
+          </div>
+          <button className="close-modal-btn" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer', padding: '5px' }}>✕</button>
+        </div>
+
+        <div className="modal-body" style={{ width: '100%' }}>
+          {/* Income Overview */}
+          <div className="income-overview-card" style={{ backgroundColor: 'rgba(78, 204, 163, 0.1)', border: '1px solid rgba(78, 204, 163, 0.2)', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>{t.income}</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-color)', marginTop: '4px' }}>{formatCurrency(currentIncome)} <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'normal' }}>/ {t.sec}</span></div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>{t.multiplier}</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '4px' }}>x{(levelMultiplier * upgradesMultiplier).toFixed(2)}</div>
+            </div>
+          </div>
+
+          {/* Level Up section */}
+          <div className="upgrade-level-section" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, textAlign: 'left' }}>{t.upgradeLevel} ({level} ➔ {level + 1})</div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', textAlign: 'left' }}>
+                  {t.nextLevelIncome}: <span style={{ color: '#4ecca3', fontWeight: 700 }}>{formatCurrency(nextLevelIncome)} / {t.sec}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', fontWeight: 700, color: cash >= nextLevelCost ? '#fff' : '#e94560' }}>
+                {formatCurrency(nextLevelCost)}
+              </div>
+            </div>
+            
+            <button
+              onClick={() => upgradeBusinessLevel(business.id)}
+              disabled={cash < nextLevelCost}
+              className="buy-btn"
+              style={{ width: '100%', padding: '12px 0', fontSize: '1rem', fontWeight: 700 }}
+            >
+              {t.upgradeLevel}
+            </button>
+          </div>
+
+          {/* Upgrades section */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{t.upgrades} ({activeUpgrades.length}/{upgradesList.length})</h4>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{t.activeUpgrades}</div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {upgradesList.map((upgrade) => {
+                const purchased = activeUpgrades.includes(upgrade.id);
+                const upgradeName = language === 'ru' ? upgrade.nameRu : upgrade.nameEn;
+                const upgradeDesc = language === 'ru' ? upgrade.descriptionRu : upgrade.descriptionEn;
+                
+                return (
+                  <div key={upgrade.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderRadius: '6px', backgroundColor: purchased ? 'rgba(78, 204, 163, 0.04)' : 'rgba(255,255,255,0.01)', border: purchased ? '1.5px solid rgba(78, 204, 163, 0.3)' : '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ flex: 1, paddingRight: '15px', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{upgradeName}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#4ecca3', backgroundColor: 'rgba(78,204,163,0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>+{Math.round(upgrade.incomeMultiplier * 100)}%</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px', lineHeight: 1.3 }}>{upgradeDesc}</div>
+                    </div>
+                    <div>
+                      {purchased ? (
+                        <span style={{ color: '#4ecca3', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          ✓ {t.alreadyPurchased}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => buyBusinessUpgrade(business.id, upgrade.id)}
+                          disabled={cash < upgrade.cost}
+                          className="buy-btn"
+                          style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700 }}
+                        >
+                          {t.buyUpgrade} - {formatCurrency(upgrade.cost)}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {upgradesList.length === 0 && (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+                  No upgrades available.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 function App() {
   const [view, setView] = useState<View>('dashboard');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -727,8 +893,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedStockSymbol, setSelectedStockSymbol] = useState<string | null>(null);
   const [selectedFullChartSymbol, setSelectedFullChartSymbol] = useState<string | null>(null);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
 
-  const { cash, netWorth, stocks, ownedStocks, businesses, ownedBusinesses, luxuryAssets, ownedLuxuryAssets, news, language, user, login, logout, buyStock, sellStock, buyBusiness, buyLuxuryAsset, addCash, resetGame, setLanguage, serverUrl } = useGame();
+  const { cash, netWorth, stocks, ownedStocks, businesses, ownedBusinesses, businessStates, luxuryAssets, ownedLuxuryAssets, news, language, user, login, logout, buyStock, sellStock, buyBusiness, buyLuxuryAsset, addCash, resetGame, setLanguage, serverUrl } = useGame();
 
 
   const t = TRANSLATIONS[language];
@@ -899,17 +1066,47 @@ function App() {
             <div className="businesses-grid">
               {businesses.map(biz => {
                 const owned = ownedBusinesses.includes(biz.id);
+                const bizState = (businessStates && businessStates[biz.id]) || { level: 1, upgrades: [] };
+                const levelMultiplier = Math.pow(1.3, bizState.level - 1);
+                const upgradesList = BUSINESS_UPGRADES[biz.id] || [];
+                const upgradesMultiplier = bizState.upgrades.reduce((sum, upId) => {
+                  const upgradeObj = upgradesList.find(u => u.id === upId);
+                  return sum + (upgradeObj ? upgradeObj.incomeMultiplier : 0);
+                }, 1.0);
+                const currentIncome = Math.round(biz.incomePerTick * levelMultiplier * upgradesMultiplier);
+
                 return (
-                  <div key={biz.id} className="card business-card-item">
-                    <div className="business-info">
-                      <strong>{getName(biz.name)}</strong>
-                      <div className="business-income">{t.income}: {formatCurrency(biz.incomePerTick)} / {t.sec}</div>
+                  <div 
+                    key={biz.id} 
+                    className={`card business-card-item ${owned ? 'owned-card' : ''}`}
+                    onClick={() => owned && setSelectedBusinessId(biz.id)}
+                    style={{ cursor: owned ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                  >
+                    <div className="business-info" style={{ textAlign: 'left', width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '1.1rem' }}>{getName(biz.name)}</strong>
+                        {owned && (
+                          <span style={{ backgroundColor: 'var(--accent-color)', color: '#1a1a2e', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
+                            {t.level} {bizState.level}
+                          </span>
+                        )}
+                      </div>
+                      <div className="business-income" style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                        {t.income}: <span style={{ color: owned ? 'var(--accent-color)' : '#fff', fontWeight: 700 }}>{formatCurrency(currentIncome)}</span> / {t.sec}
+                      </div>
+                      {owned && upgradesList.length > 0 && (
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
+                          {t.upgrades}: {bizState.upgrades.length} / {upgradesList.length}
+                        </div>
+                      )}
                     </div>
-                    <div className="business-controls">
+                    <div className="business-controls" style={{ marginTop: '15px', width: '100%' }} onClick={e => owned && e.stopPropagation()}>
                       {owned ? (
-                        <span className="owned-status">{t.owned}</span>
+                        <button onClick={() => setSelectedBusinessId(biz.id)} className="manage-btn" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#4ecca3', width: '100%', padding: '8px 0', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+                          ⚙️ {language === 'ru' ? 'Управление' : 'Manage'}
+                        </button>
                       ) : (
-                        <button onClick={() => buyBusiness(biz.id)} disabled={cash < biz.baseCost} className="buy-btn">
+                        <button onClick={() => buyBusiness(biz.id)} disabled={cash < biz.baseCost} className="buy-btn" style={{ width: '100%', padding: '8px 0', fontSize: '0.85rem' }}>
                           {t.buy} - {formatCurrency(biz.baseCost)}
                         </button>
                       )}
@@ -1060,6 +1257,13 @@ function App() {
         <StockFullChartModal
           symbol={selectedFullChartSymbol}
           onClose={() => setSelectedFullChartSymbol(null)}
+        />
+      )}
+
+      {selectedBusinessId && (
+        <BusinessDetailsModal
+          businessId={selectedBusinessId}
+          onClose={() => setSelectedBusinessId(null)}
         />
       )}
     </div>

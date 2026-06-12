@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { GameState, Stock, Business, LuxuryAsset, NewsItem } from '../types';
+import type { GameState, Stock, Business, LuxuryAsset, NewsItem, BusinessUpgrade } from '../types';
 import { Capacitor } from '@capacitor/core';
 
 interface GameContextType extends GameState {
   buyStock: (symbol: string, quantity: number) => void;
   sellStock: (symbol: string, quantity: number) => void;
   buyBusiness: (id: string) => void;
+  upgradeBusinessLevel: (id: string) => void;
+  buyBusinessUpgrade: (businessId: string, upgradeId: string) => void;
   buyLuxuryAsset: (id: string) => void;
   addCash: (amount: number) => void;
   resetGame: () => void;
@@ -53,7 +55,7 @@ const INITIAL_BUSINESSES: Business[] = [
   { id: 'b3', name: 'Tech Startup / Тех-стартап', baseCost: 10000, incomePerTick: 200, level: 1, type: 'creation' },
   { id: 'b4', name: 'Small Factory / Небольшой завод', baseCost: 50000, incomePerTick: 1200, level: 1, type: 'acquisition' },
   { id: 'b5', name: 'Supermarket / Супермаркет', baseCost: 150000, incomePerTick: 4500, level: 1, type: 'acquisition' },
-  { id: 'b6', name: 'Retail Chain / Сеть магазинов', baseCost: 500000, incomePerTick: 18000, level: 1, type: 'acquisition' },
+  { id: 'b6', name: 'Construction Company / Строительная компания', baseCost: 500000, incomePerTick: 18000, level: 1, type: 'acquisition' },
   { id: 'b7', name: 'Software House / Софтверная компания', baseCost: 2000000, incomePerTick: 85000, level: 1, type: 'creation' },
   { id: 'b8', name: 'Luxury Hotel / Роскошный отель', baseCost: 10000000, incomePerTick: 450000, level: 1, type: 'acquisition' },
   { id: 'b9', name: 'Cargo Port / Грузовой порт', baseCost: 50000000, incomePerTick: 2500000, level: 1, type: 'acquisition' },
@@ -74,6 +76,59 @@ const INITIAL_LUXURY_ASSETS: LuxuryAsset[] = [
   { id: 'l11', name: 'Superyacht / Суперяхта', cost: 100000000, category: 'Transport', image: '/images/superyacht.jpg' },
   { id: 'l12', name: 'Private Island / Частный остров', cost: 500000000, category: 'Real Estate', image: '/images/island.jpg' },
 ];
+
+export const BUSINESS_UPGRADES: { [businessId: string]: BusinessUpgrade[] } = {
+  b1: [
+    { id: 'b1_u1', nameRu: 'Фирменный рецепт', nameEn: 'Secret Recipe', cost: 150, incomeMultiplier: 0.5, descriptionRu: 'Секретная смесь лимонов увеличивает доход на 50%', descriptionEn: 'Secret lemon mix increases income by 50%' },
+    { id: 'b1_u2', nameRu: 'Лед и мята', nameEn: 'Ice & Mint', cost: 500, incomeMultiplier: 1.0, descriptionRu: 'Освежающие добавки удваивают продажи в жару (+100%)', descriptionEn: 'Refreshing add-ons double sales in hot weather (+100%)' },
+    { id: 'b1_u3', nameRu: 'Уличный зазывала', nameEn: 'Street Promoter', cost: 1500, incomeMultiplier: 1.5, descriptionRu: 'Привлекает толпы новых клиентов (+150%)', descriptionEn: 'Attracts crowds of new customers (+150%)' }
+  ],
+  b2: [
+    { id: 'b2_u1', nameRu: 'Премиальная арабика', nameEn: 'Premium Arabica', cost: 1500, incomeMultiplier: 0.5, descriptionRu: 'Кофе высшего сорта привлекает гурманов (+50%)', descriptionEn: 'Top-grade coffee beans attract connoisseurs (+50%)' },
+    { id: 'b2_u2', nameRu: 'Пекарский уголок', nameEn: 'Pastry Corner', cost: 4000, incomeMultiplier: 1.0, descriptionRu: 'Круассаны и донаты увеличивают средний чек (+100%)', descriptionEn: 'Croissants and donuts increase average bill (+100%)' },
+    { id: 'b2_u3', nameRu: 'Кофе-машина La Marzocco', nameEn: 'La Marzocco Espresso Machine', cost: 12000, incomeMultiplier: 2.0, descriptionRu: 'Ускоряет обслуживание клиентов и улучшает вкус (+200%)', descriptionEn: 'Speeds up customer service and improves taste (+200%)' }
+  ],
+  b3: [
+    { id: 'b3_u1', nameRu: 'Мобильное приложение', nameEn: 'Mobile App', cost: 15000, incomeMultiplier: 0.6, descriptionRu: 'Выход на мобильные платформы увеличивает аудиторию (+60%)', descriptionEn: 'Launching on mobile platforms increases audience by 60%' },
+    { id: 'b3_u2', nameRu: 'Интеграция ИИ-помощника', nameEn: 'AI Assistant Integration', cost: 45000, incomeMultiplier: 1.2, descriptionRu: 'Автоматизация поддержки и персонализация сервиса (+120%)', descriptionEn: 'Automated support and personalized services (+120%)' },
+    { id: 'b3_u3', nameRu: 'Выход на международный рынок', nameEn: 'Global Scaling', cost: 120000, incomeMultiplier: 2.5, descriptionRu: 'Локализация и запуск рекламы в США и ЕС (+250%)', descriptionEn: 'Localization and marketing campaign in US and EU (+250%)' }
+  ],
+  b4: [
+    { id: 'b4_u1', nameRu: 'Автоматизация конвейера', nameEn: 'Conveyor Automation', cost: 75000, incomeMultiplier: 0.5, descriptionRu: 'Снижает издержки производства и ускоряет выпуск (+50%)', descriptionEn: 'Reduces production costs and speeds up output (+50%)' },
+    { id: 'b4_u2', nameRu: 'Роботизированные манипуляторы', nameEn: 'Robotic Arms', cost: 200000, incomeMultiplier: 1.0, descriptionRu: 'Круглосуточная работа с идеальной точностью (+100%)', descriptionEn: '24/7 manufacturing with perfect precision (+100%)' },
+    { id: 'b4_u3', nameRu: 'Собственная логистическая сеть', nameEn: 'In-House Logistics', cost: 600000, incomeMultiplier: 1.8, descriptionRu: 'Снижает расходы на доставку сырья и готовых товаров (+180%)', descriptionEn: 'Cuts expenses on raw materials and delivery (+180%)' }
+  ],
+  b5: [
+    { id: 'b5_u1', nameRu: 'Кассы самообслуживания', nameEn: 'Self-Checkout Terminals', cost: 200000, incomeMultiplier: 0.4, descriptionRu: 'Сокращают очереди и увеличивают пропускную способность (+40%)', descriptionEn: 'Reduce queues and increase shop throughput (+40%)' },
+    { id: 'b5_u2', nameRu: 'Собственная пекарня в зале', nameEn: 'In-Store Bakery', cost: 500000, incomeMultiplier: 0.8, descriptionRu: 'Запах свежего хлеба заставляет покупать больше (+80%)', descriptionEn: 'Smell of fresh bread drives impulsive purchases (+80%)' },
+    { id: 'b5_u3', nameRu: 'Экспресс-доставка за 15 минут', nameEn: '15-Min Delivery App', cost: 1500000, incomeMultiplier: 2.0, descriptionRu: 'Захват рынка онлайн-заказов продуктов (+200%)', descriptionEn: 'Capture the online grocery delivery market (+200%)' }
+  ],
+  b6: [
+    { id: 'b6_u1', nameRu: 'Строительство жилых комплексов', nameEn: 'Residential Buildings', cost: 800000, incomeMultiplier: 0.6, descriptionRu: 'Возведение многоэтажных домов комфорт-класса (+60%)', descriptionEn: 'Construction of comfort-class multi-family apartments (+60%)' },
+    { id: 'b6_u2', nameRu: 'Строительство бизнес-центров', nameEn: 'Business Centers', cost: 2500000, incomeMultiplier: 1.2, descriptionRu: 'Проектирование и постройка современных офисов класса А (+120%)', descriptionEn: 'Design and construction of modern Class-A offices (+120%)' },
+    { id: 'b6_u3', nameRu: 'Государственные контракты', nameEn: 'Government Infrastructure Contracts', cost: 7500000, incomeMultiplier: 2.5, descriptionRu: 'Строительство мостов, стадионов и дорог (+250%)', descriptionEn: 'Building stadiums, bridges, and highways (+250%)' }
+  ],
+  b7: [
+    { id: 'b7_u1', nameRu: 'SaaS-платформа по подписке', nameEn: 'SaaS Subscription Model', cost: 3000000, incomeMultiplier: 0.5, descriptionRu: 'Регулярные платежи от тысяч компаний (+50%)', descriptionEn: 'Recurring payments from thousands of corporate customers (+50%)' },
+    { id: 'b7_u2', nameRu: 'Кибербезопасность корпоративного уровня', nameEn: 'Enterprise Cyber Security', cost: 8000000, incomeMultiplier: 1.0, descriptionRu: 'Защита данных крупных клиентов, работа с госсектором (+100%)', descriptionEn: 'Data protection for enterprise and government clients (+100%)' },
+    { id: 'b7_u3', nameRu: 'Глобальные продажи Enterprise', nameEn: 'Global Enterprise Sales', cost: 25000000, incomeMultiplier: 2.0, descriptionRu: 'Сделки на миллионы долларов с лидерами рынка (+200%)', descriptionEn: 'Multi-million dollar deals with industry leaders (+200%)' }
+  ],
+  b8: [
+    { id: 'b8_u1', nameRu: 'Мишленовский ресторан', nameEn: 'Michelin Star Restaurant', cost: 15000000, incomeMultiplier: 0.4, descriptionRu: 'Привлекает элитных гостей со всего мира (+40%)', descriptionEn: 'Attracts elite diners and wealthy guests worldwide (+40%)' },
+    { id: 'b8_u2', nameRu: 'Элитный спа-комплекс', nameEn: 'Premium Spa & Wellness', cost: 40000000, incomeMultiplier: 0.8, descriptionRu: 'Водолечение и массаж премиум-класса (+80%)', descriptionEn: 'High-end therapeutic treatments (+80%)' },
+    { id: 'b8_u3', nameRu: 'Вертолетная площадка на крыше', nameEn: 'Rooftop Helipad', cost: 100000000, incomeMultiplier: 1.8, descriptionRu: 'VIP-трансфер для самых богатых клиентов (+180%)', descriptionEn: 'VIP helicopter shuttle service for elite clients (+180%)' }
+  ],
+  b9: [
+    { id: 'b9_u1', nameRu: 'Таможенный хаб', nameEn: 'Customs Logistics Hub', cost: 80000000, incomeMultiplier: 0.5, descriptionRu: 'Ускоренное оформление грузов на месте (+50%)', descriptionEn: 'On-site fast-track cargo clearance and inspection (+50%)' },
+    { id: 'b9_u2', nameRu: 'Глубоководный причал', nameEn: 'Deep-Water Pier', cost: 200000000, incomeMultiplier: 1.0, descriptionRu: 'Возможность принимать крупнейшие грузовые супертанкеры (+100%)', descriptionEn: 'Allows accommodating the largest cargo supertankers (+100%)' },
+    { id: 'b9_u3', nameRu: 'Автоматизация терминала ИИ', nameEn: 'AI-Driven Container Terminal', cost: 600000000, incomeMultiplier: 2.0, descriptionRu: 'Беспилотное перемещение контейнеров 24/7 (+200%)', descriptionEn: 'Autonomous container stacking and routing 24/7 (+200%)' }
+  ],
+  b10: [
+    { id: 'b10_u1', nameRu: 'Премиальные кредитные карты', nameEn: 'Premium Credit Cards', cost: 400000000, incomeMultiplier: 0.4, descriptionRu: 'Уникальные привилегии и высокие комиссии с транзакций (+40%)', descriptionEn: 'Exclusive privileges and high transaction fees (+40%)' },
+    { id: 'b10_u2', nameRu: 'Управление крупным капиталом (Private Banking)', nameEn: 'Private Wealth Management', cost: 1000000000, incomeMultiplier: 0.9, descriptionRu: 'Инвестиции и управление активами мультимиллионеров (+90%)', descriptionEn: 'Asset management for ultra-high-net-worth individuals (+90%)' },
+    { id: 'b10_u3', nameRu: 'Собственная космическая платежная система', nameEn: 'Space Payment Network', cost: 3000000000, incomeMultiplier: 2.2, descriptionRu: 'Платежные шлюзы для орбитальных и лунных колоний (+220%)', descriptionEn: 'Payment gateways for orbital and lunar colonies (+220%)' }
+  ]
+};
 
 interface NewsEvent {
   id: string;
@@ -103,6 +158,7 @@ const INITIAL_STATE: GameState = {
   ownedStocks: {},
   businesses: INITIAL_BUSINESSES,
   ownedBusinesses: [],
+  businessStates: {},
   luxuryAssets: INITIAL_LUXURY_ASSETS,
   ownedLuxuryAssets: [],
   tick: 0,
@@ -198,8 +254,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
               volatility: initial?.volatility || stock.volatility || 0.03
             };
           });
+          const mergedBusinessStates = data.businessStates || {};
+          const ownedBizes = data.ownedBusinesses || [];
+          ownedBizes.forEach((id: string) => {
+            if (!mergedBusinessStates[id]) {
+              mergedBusinessStates[id] = { level: 1, upgrades: [] };
+            }
+          });
           setState({
             ...data,
+            businessStates: mergedBusinessStates,
             luxuryAssets: mergedLuxuryAssets,
             stocks: mergedStocks
           });
@@ -276,7 +340,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const passiveIncome = prev.ownedBusinesses.reduce((acc, bId) => {
         const business = prev.businesses.find((b) => b.id === bId);
-        return acc + (business?.incomePerTick || 0);
+        if (!business) return acc;
+        const bizState = (prev.businessStates && prev.businessStates[bId]) || { level: 1, upgrades: [] };
+        const levelMultiplier = Math.pow(1.3, bizState.level - 1); // 30% compounding increase per level
+        const upgradesList = BUSINESS_UPGRADES[bId] || [];
+        const upgradesMultiplier = bizState.upgrades.reduce((sum, upId) => {
+          const upgradeObj = upgradesList.find(u => u.id === upId);
+          return sum + (upgradeObj ? upgradeObj.incomeMultiplier : 0);
+        }, 1.0);
+        return acc + Math.round(business.incomePerTick * levelMultiplier * upgradesMultiplier);
       }, 0);
 
       const newCash = prev.cash + passiveIncome;
@@ -333,7 +405,71 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => {
       const business = prev.businesses.find((b) => b.id === id);
       if (!business || prev.cash < business.baseCost || prev.ownedBusinesses.includes(id)) return prev;
-      return { ...prev, cash: prev.cash - business.baseCost, ownedBusinesses: [...prev.ownedBusinesses, id] };
+      const initialStates = prev.businessStates || {};
+      return { 
+        ...prev, 
+        cash: prev.cash - business.baseCost, 
+        ownedBusinesses: [...prev.ownedBusinesses, id],
+        businessStates: {
+          ...initialStates,
+          [id]: { level: 1, upgrades: [] }
+        }
+      };
+    });
+  };
+
+  const upgradeBusinessLevel = (id: string) => {
+    setState((prev) => {
+      const business = prev.businesses.find((b) => b.id === id);
+      if (!business || !prev.ownedBusinesses.includes(id)) return prev;
+      
+      const bizStates = prev.businessStates || {};
+      const bizState = bizStates[id] || { level: 1, upgrades: [] };
+      const currentLevel = bizState.level;
+      
+      // Calculate level upgrade cost: baseCost * (1.6 ^ level)
+      const upgradeCost = Math.round(business.baseCost * Math.pow(1.6, currentLevel));
+      
+      if (prev.cash < upgradeCost) return prev;
+      
+      const updatedStates = { ...bizStates };
+      updatedStates[id] = {
+        ...bizState,
+        level: currentLevel + 1
+      };
+      
+      return {
+        ...prev,
+        cash: prev.cash - upgradeCost,
+        businessStates: updatedStates
+      };
+    });
+  };
+
+  const buyBusinessUpgrade = (businessId: string, upgradeId: string) => {
+    setState((prev) => {
+      const business = prev.businesses.find((b) => b.id === businessId);
+      if (!business || !prev.ownedBusinesses.includes(businessId)) return prev;
+      
+      const upgrades = BUSINESS_UPGRADES[businessId] || [];
+      const upgrade = upgrades.find((u) => u.id === upgradeId);
+      if (!upgrade || prev.cash < upgrade.cost) return prev;
+      
+      const bizStates = prev.businessStates || {};
+      const bizState = bizStates[businessId] || { level: 1, upgrades: [] };
+      if (bizState.upgrades.includes(upgradeId)) return prev; // already bought
+      
+      const updatedStates = { ...bizStates };
+      updatedStates[businessId] = {
+        ...bizState,
+        upgrades: [...bizState.upgrades, upgradeId]
+      };
+      
+      return {
+        ...prev,
+        cash: prev.cash - upgrade.cost,
+        businessStates: updatedStates
+      };
     });
   };
 
@@ -350,7 +486,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setLanguage = (lang: 'ru' | 'en') => setState(prev => ({ ...prev, language: lang }));
 
   return (
-    <GameContext.Provider value={{ ...state, buyStock, sellStock, buyBusiness, buyLuxuryAsset, addCash, resetGame, setLanguage, user, login, logout, serverUrl, setServerUrl }}>
+    <GameContext.Provider value={{ ...state, buyStock, sellStock, buyBusiness, upgradeBusinessLevel, buyBusinessUpgrade, buyLuxuryAsset, addCash, resetGame, setLanguage, user, login, logout, serverUrl, setServerUrl }}>
       {children}
     </GameContext.Provider>
   );

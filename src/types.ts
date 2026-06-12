@@ -16,6 +16,16 @@ export interface Business {
   type: 'creation' | 'acquisition';
 }
 
+export interface BusinessUpgrade {
+  id: string;
+  nameRu: string;
+  nameEn: string;
+  cost: number;
+  incomeMultiplier: number;
+  descriptionRu: string;
+  descriptionEn: string;
+}
+
 export interface LuxuryAsset {
   id: string;
   name: string;
@@ -36,6 +46,7 @@ export interface GameState {
   ownedStocks: { [symbol: string]: number }; // symbol -> quantity
   businesses: Business[];
   ownedBusinesses: string[]; // ids
+  businessStates?: { [id: string]: { level: number; upgrades: string[] } };
   luxuryAssets: LuxuryAsset[];
   ownedLuxuryAssets: string[]; // ids
   tick: number;
