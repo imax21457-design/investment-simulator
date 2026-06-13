@@ -252,10 +252,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         if (typeof data === 'object' && 'cash' in data) {
-          const mergedLuxuryAssets = (data.luxuryAssets || INITIAL_LUXURY_ASSETS).map((asset: any) => {
-            const staticAsset = INITIAL_LUXURY_ASSETS.find(a => a.id === asset.id);
-            return { ...asset, image: staticAsset?.image };
-          });
+          const mergedLuxuryAssets = INITIAL_LUXURY_ASSETS;
           const mergedStocks = (data.stocks || INITIAL_STOCKS).map((stock: any) => {
             const initial = INITIAL_STOCKS.find(s => s.symbol === stock.symbol);
             let history = Array.isArray(stock.history) ? stock.history : [];
