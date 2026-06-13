@@ -29,6 +29,7 @@ const TRANSLATIONS = {
     category: 'Категория',
     realEstate: 'Недвижимость',
     transport: 'Транспорт',
+    art: 'Искусство',
     property: 'В собственности',
     purchase: 'Приобрести за',
     lang: 'Язык',
@@ -95,6 +96,7 @@ const TRANSLATIONS = {
     category: 'Category',
     realEstate: 'Real Estate',
     transport: 'Transport',
+    art: 'Art',
     property: 'Owned',
     purchase: 'Purchase for',
     lang: 'Language',
@@ -1469,7 +1471,9 @@ function App() {
                     )}
                     <div className="luxury-info">
                       <strong>{getName(asset.name)}</strong>
-                      <div className="luxury-category">{t.category}: {asset.category === 'Real Estate' ? t.realEstate : t.transport}</div>
+                      <div className="luxury-category">
+                        {t.category}: {asset.category === 'Real Estate' ? t.realEstate : (asset.category === 'Transport' ? t.transport : t.art)}
+                      </div>
                     </div>
                     <div className="luxury-controls">
                       {owned ? (

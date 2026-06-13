@@ -30,7 +30,7 @@ export interface LuxuryAsset {
   id: string;
   name: string;
   cost: number;
-  category: 'Real Estate' | 'Transport';
+  category: 'Real Estate' | 'Transport' | 'Art';
   image?: string;
 }
 
