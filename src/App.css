@@ -234,6 +234,10 @@ h2 {
   font-weight: 800;
   margin: 8px 0;
   color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .card-chip {
@@ -802,6 +806,10 @@ button:disabled {
   
   .card-balance {
     font-size: 1.75rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .card-chip {

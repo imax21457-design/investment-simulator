@@ -1247,7 +1247,7 @@ function App() {
             <div className="bank-card">
               <div>
                 <div className="card-label">{t.balance}</div>
-                <div className="card-balance">{formatCurrency(cash)}</div>
+                <div className="card-balance">{formatCompactCurrency(cash)}</div>
                 <div className="card-chip"></div>
               </div>
               <div className="card-footer">
@@ -1261,7 +1261,14 @@ function App() {
 
             <div className="card">
               <h3>{t.stats}</h3>
-              <p>{t.netWorth}: <span className="stat-value">{formatCurrency(netWorth)}</span></p>
+              <p style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.95rem' }}>
+                <span style={{ color: '#94a3b8' }}>{language === 'ru' ? 'Баланс наличных' : 'Cash Balance'}:</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{formatCurrency(cash)}</span>
+              </p>
+              <p style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                <span style={{ color: '#94a3b8' }}>{t.netWorth}:</span>
+                <span className="stat-value">{formatCurrency(netWorth)}</span>
+              </p>
             </div>
             
             <div className="card clicker-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
