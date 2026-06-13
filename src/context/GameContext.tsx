@@ -62,6 +62,9 @@ const INITIAL_BUSINESSES: Business[] = [
   { id: 'b8', name: 'Luxury Hotel / Роскошный отель', baseCost: 10000000, incomePerTick: 450000, level: 1, type: 'acquisition' },
   { id: 'b9', name: 'Cargo Port / Грузовой порт', baseCost: 50000000, incomePerTick: 2500000, level: 1, type: 'acquisition' },
   { id: 'b10', name: 'Global Bank / Глобальный банк', baseCost: 250000000, incomePerTick: 15000000, level: 1, type: 'acquisition' },
+  { id: 'b11', name: 'Space Tourism / Космический туризм', baseCost: 1500000000, incomePerTick: 100000000, level: 1, type: 'creation' },
+  { id: 'b12', name: 'Asteroid Mining / Добыча астероидов', baseCost: 10000000000, incomePerTick: 800000000, level: 1, type: 'acquisition' },
+  { id: 'b13', name: 'Dyson Sphere Project / Проект «Сфера Дайсона»', baseCost: 100000000000, incomePerTick: 10000000000, level: 1, type: 'creation' },
 ];
 
 const INITIAL_LUXURY_ASSETS: LuxuryAsset[] = [
@@ -82,7 +85,11 @@ const INITIAL_LUXURY_ASSETS: LuxuryAsset[] = [
   { id: 'l10', name: 'Private Jet / Личный самолет', cost: 25000000, category: 'Transport', image: '/images/jet.jpg' },
   { id: 'l18', name: 'Medieval Castle / Средневековый замок', cost: 45000000, category: 'Real Estate', image: '/images/castle.png' },
   { id: 'l11', name: 'Superyacht / Суперяхта', cost: 100000000, category: 'Transport', image: '/images/superyacht.jpg' },
+  { id: 'l19', name: 'Monaco Mega-Mansion / Мега-особняк в Монако', cost: 150000000, category: 'Real Estate', image: '/images/monaco_mansion.jpg' },
+  { id: 'l20', name: 'Supersonic Business Jet / Сверхзвуковой бизнес-джет', cost: 400000000, category: 'Transport', image: '/images/supersonic_jet.jpg' },
   { id: 'l12', name: 'Private Island / Частный остров', cost: 500000000, category: 'Real Estate', image: '/images/island.jpg' },
+  { id: 'l21', name: 'Leonardo da Vinci Original / Оригинал картины да Винчи', cost: 1500000000, category: 'Art', image: '/images/davinci_painting.jpg' },
+  { id: 'l22', name: 'Space Station Villa / Вилла на орбитальной станции', cost: 8000000000, category: 'Real Estate', image: '/images/space_station.jpg' },
 ];
 
 export const BUSINESS_UPGRADES: { [businessId: string]: BusinessUpgrade[] } = {
@@ -135,6 +142,21 @@ export const BUSINESS_UPGRADES: { [businessId: string]: BusinessUpgrade[] } = {
     { id: 'b10_u1', nameRu: 'Премиальные кредитные карты', nameEn: 'Premium Credit Cards', cost: 400000000, incomeMultiplier: 0.4, descriptionRu: 'Уникальные привилегии и высокие комиссии с транзакций (+40%)', descriptionEn: 'Exclusive privileges and high transaction fees (+40%)' },
     { id: 'b10_u2', nameRu: 'Управление крупным капиталом (Private Banking)', nameEn: 'Private Wealth Management', cost: 1000000000, incomeMultiplier: 0.9, descriptionRu: 'Инвестиции и управление активами мультимиллионеров (+90%)', descriptionEn: 'Asset management for ultra-high-net-worth individuals (+90%)' },
     { id: 'b10_u3', nameRu: 'Собственная космическая платежная система', nameEn: 'Space Payment Network', cost: 3000000000, incomeMultiplier: 2.2, descriptionRu: 'Платежные шлюзы для орбитальных и лунных колоний (+220%)', descriptionEn: 'Payment gateways for orbital and lunar colonies (+220%)' }
+  ],
+  b11: [
+    { id: 'b11_u1', nameRu: 'Суборбитальные полеты', nameEn: 'Suborbital Flights', cost: 3000000000, incomeMultiplier: 0.5, descriptionRu: 'Организация полетов на границу космоса (+50%)', descriptionEn: 'Organizing short flights to the edge of space (+50%)' },
+    { id: 'b11_u2', nameRu: 'Лунный курорт', nameEn: 'Lunar Resort', cost: 10000000000, incomeMultiplier: 1.0, descriptionRu: 'Строительство отеля под куполом на Луне (+100%)', descriptionEn: 'Building a domed hotel on the Moon (+100%)' },
+    { id: 'b11_u3', nameRu: 'Туры в колонию на Марсе', nameEn: 'Mars Colony Tours', cost: 30000000000, incomeMultiplier: 2.0, descriptionRu: 'Регулярные рейсы на Красную планету (+200%)', descriptionEn: 'Regular voyages to the Red Planet (+200%)' }
+  ],
+  b12: [
+    { id: 'b12_u1', nameRu: 'Квантовые сканеры', nameEn: 'Quantum Scanners', cost: 20000000000, incomeMultiplier: 0.6, descriptionRu: 'Поиск ценных металлов в поясе астероидов (+60%)', descriptionEn: 'Quick mapping of precious metals in the asteroid belt (+60%)' },
+    { id: 'b12_u2', nameRu: 'Гравитационные сборщики', nameEn: 'Gravity Harvesters', cost: 60000000000, incomeMultiplier: 1.2, descriptionRu: 'Притягивание метеоритов для переработки (+120%)', descriptionEn: 'Attracting smaller meteors for automated smelting (+120%)' },
+    { id: 'b12_u3', nameRu: 'Антиматериальные плавильни', nameEn: 'Antimatter Smelters', cost: 150000000000, incomeMultiplier: 2.5, descriptionRu: 'Выделение чистейшей платины и иридия (+250%)', descriptionEn: 'Extracting ultra-pure platinum and iridium (+250%)' }
+  ],
+  b13: [
+    { id: 'b13_u1', nameRu: 'Спутники солнечного роя', nameEn: 'Solar Swarm Satellites', cost: 200000000000, incomeMultiplier: 0.5, descriptionRu: 'Первый сектор спутников вокруг звезды (+50%)', descriptionEn: 'First shell of orbital satellites around the star (+50%)' },
+    { id: 'b13_u2', nameRu: 'Приемники лучевой энергии', nameEn: 'Energy Beam Receivers', cost: 600000000000, incomeMultiplier: 1.0, descriptionRu: 'Передача тераватт энергии на Землю (+100%)', descriptionEn: 'Wireless transfer of terawatts of energy to Earth (+100%)' },
+    { id: 'b13_u3', nameRu: 'Звездная инженерия', nameEn: 'Stellar Engineering', cost: 2000000000000, incomeMultiplier: 2.5, descriptionRu: 'Полное покрытие звезды для сбора энергии (+250%)', descriptionEn: 'Complete star encapsulation for full energy capture (+250%)' }
   ]
 };
 
@@ -277,6 +299,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setState({
             ...data,
+            businesses: INITIAL_BUSINESSES,
             businessStates: mergedBusinessStates,
             clickLevel: data.clickLevel || 1,
             activeForecasts: data.activeForecasts || {},

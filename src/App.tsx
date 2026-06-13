@@ -600,7 +600,7 @@ const StockFullChartModal = ({
   symbol: string;
   onClose: () => void;
 }) => {
-  const { stocks, ownedStocks, cash, buyStock, sellStock, language } = useGame();
+  const { stocks, ownedStocks, cash, buyStock, sellStock, buyStockForecast, activeForecasts, language } = useGame();
   const stock = stocks.find(s => s.symbol === symbol);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [timeframe, setTimeframe] = useState<15 | 30 | 50>(50);
@@ -863,6 +863,57 @@ const StockFullChartModal = ({
                 <div className="detail-stat-value" style={{ fontSize: '1.15rem', fontWeight: 800 }}>{stat.value}</div>
               </div>
             ))}
+          </div>
+
+          {/* Forecast section */}
+          <div className="forecast-card" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px', borderRadius: '8px', marginBottom: '20px', textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>🔮 {t.buyForecast} (100% Accuracy)</span>
+              {activeForecasts && activeForecasts[stock.symbol] ? (
+                <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(78,204,163,0.1)', color: '#4ecca3', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                  {t.forecastActive}
+                </span>
+              ) : null}
+            </div>
+
+            {activeForecasts && activeForecasts[stock.symbol] && activeForecasts[stock.symbol].ticksLeft > 0 ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>
+                  {language === 'ru' ? 'Направление' : 'Forecasted'}: {' '}
+                  <span style={{ color: activeForecasts[stock.symbol].direction === 'up' ? '#4ecca3' : '#e94560' }}>
+                    {activeForecasts[stock.symbol].direction === 'up' ? t.forecastGrowth : t.forecastDecline}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  {activeForecasts[stock.symbol].ticksLeft} {t.forecastTimeLeft}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', flex: 1, lineHeight: 1.3 }}>
+                  {language === 'ru' 
+                    ? 'Анализ рыночных алгоритмов на 15 секунд.' 
+                    : '15-second analysis of market algorithms.'}
+                </div>
+                <button
+                  onClick={() => buyStockForecast(stock.symbol)}
+                  disabled={cash < Math.max(100, Math.round(stock.price * 3))}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                    border: '1.5px solid rgba(241, 196, 15, 0.3)',
+                    color: '#f1c40f',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  💵 {formatCurrency(Math.max(100, Math.round(stock.price * 3)))}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="modal-trade-section" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
