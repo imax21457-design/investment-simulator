@@ -149,6 +149,8 @@ body {
   border-radius: 50%;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
+  z-index: 101;
 }
 
 .settings-toggle-btn:hover {
@@ -741,12 +743,14 @@ button:disabled {
   /* Header adjustments */
   .header {
     left: 0;
-    padding: 0 20px;
+    padding: 0 15px;
     background: rgba(26, 26, 46, 0.85);
   }
   
   .header-stats {
     gap: 15px;
+    max-width: calc(100% - 50px);
+    overflow: hidden;
   }
   
   /* Main Content Area adjustments */
@@ -779,7 +783,8 @@ button:disabled {
 
 @media (max-width: 500px) {
   .header-stats {
-    gap: 12px;
+    gap: 8px;
+    max-width: calc(100% - 46px);
   }
   
   .header-stat-item {

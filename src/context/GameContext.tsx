@@ -132,6 +132,13 @@ export const BUSINESS_UPGRADES: { [businessId: string]: BusinessUpgrade[] } = {
   ]
 };
 
+export const getBusinessTaxRate = (baseCost: number): number => {
+  if (baseCost >= 250000000) return 0.20; // 20% for Global Bank
+  if (baseCost >= 10000000) return 0.15;  // 15% for luxury hotels / cargo ports
+  if (baseCost >= 50000) return 0.10;     // 10% for medium businesses
+  return 0.05;                            // 5% for small businesses
+};
+
 interface NewsEvent {
   id: string;
   messageEn: string;
@@ -383,19 +390,28 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...stock, price: newPrice, history: newHistory };
       });
 
-      const passiveIncome = prev.ownedBusinesses.reduce((acc, bId) => {
+      let totalBusinessGross = 0;
+      let totalTaxPaid = 0;
+
+      prev.ownedBusinesses.forEach((bId) => {
         const business = prev.businesses.find((b) => b.id === bId);
-        if (!business) return acc;
+        if (!business) return;
         const bizState = (prev.businessStates && prev.businessStates[bId]) || { level: 1, upgrades: [] };
-        const levelMultiplier = Math.pow(1.3, bizState.level - 1); // 30% compounding increase per level
+        const levelMultiplier = Math.pow(1.3, bizState.level - 1);
         const upgradesList = BUSINESS_UPGRADES[bId] || [];
         const upgradesMultiplier = bizState.upgrades.reduce((sum, upId) => {
           const upgradeObj = upgradesList.find(u => u.id === upId);
           return sum + (upgradeObj ? upgradeObj.incomeMultiplier : 0);
         }, 1.0);
-        return acc + Math.round(business.incomePerTick * levelMultiplier * upgradesMultiplier);
-      }, 0);
+        const grossIncome = Math.round(business.incomePerTick * levelMultiplier * upgradesMultiplier);
+        const taxRate = getBusinessTaxRate(business.baseCost);
+        const tax = Math.round(grossIncome * taxRate);
+        
+        totalBusinessGross += grossIncome;
+        totalTaxPaid += tax;
+      });
 
+      const passiveIncome = totalBusinessGross - totalTaxPaid;
       const newCash = prev.cash + passiveIncome;
 
       const stocksValue = Object.entries(prev.ownedStocks).reduce((acc, [symbol, qty]) => {

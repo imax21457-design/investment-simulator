@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
-import { useGame, BUSINESS_UPGRADES } from './context/GameContext';
+import { useGame, BUSINESS_UPGRADES, getBusinessTaxRate } from './context/GameContext';
 
 type View = 'dashboard' | 'market' | 'businesses' | 'luxury';
 
@@ -1008,11 +1008,15 @@ const BusinessDetailsModal = ({
     const upgradeObj = upgradesList.find(u => u.id === upId);
     return sum + (upgradeObj ? upgradeObj.incomeMultiplier : 0);
   }, 1.0);
-  const currentIncome = Math.round(business.incomePerTick * levelMultiplier * upgradesMultiplier);
+  const currentGrossIncome = Math.round(business.incomePerTick * levelMultiplier * upgradesMultiplier);
+  const taxRate = getBusinessTaxRate(business.baseCost);
+  const taxAmount = Math.round(currentGrossIncome * taxRate);
+  const currentNetIncome = currentGrossIncome - taxAmount;
 
   // Calculate next level values
   const nextLevelCost = Math.round(business.baseCost * Math.pow(1.6, level));
-  const nextLevelIncome = Math.round(business.incomePerTick * Math.pow(1.3, level) * upgradesMultiplier);
+  const nextLevelGross = Math.round(business.incomePerTick * Math.pow(1.3, level) * upgradesMultiplier);
+  const nextLevelNet = nextLevelGross - Math.round(nextLevelGross * taxRate);
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
@@ -1026,15 +1030,30 @@ const BusinessDetailsModal = ({
         </div>
 
         <div className="modal-body" style={{ width: '100%' }}>
-          {/* Income Overview */}
-          <div className="income-overview-card" style={{ backgroundColor: 'rgba(78, 204, 163, 0.1)', border: '1px solid rgba(78, 204, 163, 0.2)', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>{t.income}</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-color)', marginTop: '4px' }}>{formatCurrency(currentIncome)} <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'normal' }}>/ {t.sec}</span></div>
+          {/* Income & Tax Overview */}
+          <div className="income-overview-card" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '18px', borderRadius: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px', marginBottom: '12px' }}>
+              <div>
+                <div style={{ color: '#4ecca3', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {language === 'ru' ? 'Чистый Доход' : 'Net Income'}
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#4ecca3', marginTop: '4px' }}>
+                  {formatCurrency(currentNetIncome)} <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 'normal' }}>/ {t.sec}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>{t.multiplier}</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '4px', color: '#fff' }}>x{(levelMultiplier * upgradesMultiplier).toFixed(2)}</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>{t.multiplier}</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, marginTop: '4px' }}>x{(levelMultiplier * upgradesMultiplier).toFixed(2)}</div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <div style={{ color: '#94a3b8' }}>
+                {language === 'ru' ? 'Доход до налогов:' : 'Gross Income:'} <strong style={{ color: '#fff' }}>{formatCurrency(currentGrossIncome)}/{t.sec}</strong>
+              </div>
+              <div style={{ color: '#e94560', fontWeight: 600 }}>
+                {language === 'ru' ? 'Налог' : 'Tax'} ({Math.round(taxRate * 100)}%): -{formatCurrency(taxAmount)}/{t.sec}
+              </div>
             </div>
           </div>
 
@@ -1053,7 +1072,7 @@ const BusinessDetailsModal = ({
                   <div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, textAlign: 'left' }}>{t.upgradeLevel} ({level} ➔ {level + 1})</div>
                     <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', textAlign: 'left' }}>
-                      {t.nextLevelIncome}: <span style={{ color: '#4ecca3', fontWeight: 700 }}>{formatCurrency(nextLevelIncome)} / {t.sec}</span>
+                      {t.nextLevelIncome}: <span style={{ color: '#4ecca3', fontWeight: 700 }}>{formatCurrency(nextLevelNet)} / {t.sec}</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', fontWeight: 700, color: cash >= nextLevelCost ? '#fff' : '#e94560' }}>
@@ -1147,6 +1166,19 @@ function App() {
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', { style: 'currency', currency: 'USD' }).format(val);
+  };
+
+  const formatCompactCurrency = (val: number) => {
+    if (val >= 10000000) { // 10M+
+      return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', {
+        style: 'currency',
+        currency: 'USD',
+        notation: 'compact',
+        compactDisplay: 'short',
+        maximumFractionDigits: 2
+      }).format(val);
+    }
+    return formatCurrency(val);
   };
 
   const getName = (name: string) => {
@@ -1362,7 +1394,10 @@ function App() {
                   const upgradeObj = upgradesList.find(u => u.id === upId);
                   return sum + (upgradeObj ? upgradeObj.incomeMultiplier : 0);
                 }, 1.0);
-                const currentIncome = Math.round(biz.incomePerTick * levelMultiplier * upgradesMultiplier);
+                const grossIncome = Math.round(biz.incomePerTick * levelMultiplier * upgradesMultiplier);
+                const taxRate = getBusinessTaxRate(biz.baseCost);
+                const taxAmount = Math.round(grossIncome * taxRate);
+                const netIncome = grossIncome - taxAmount;
 
                 return (
                   <div 
@@ -1381,7 +1416,12 @@ function App() {
                         )}
                       </div>
                       <div className="business-income" style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                        {t.income}: <span style={{ color: owned ? 'var(--accent-color)' : '#fff', fontWeight: 700 }}>{formatCurrency(currentIncome)}</span> / {t.sec}
+                        {t.income}: <span style={{ color: owned ? 'var(--accent-color)' : '#fff', fontWeight: 700 }}>{formatCurrency(owned ? netIncome : grossIncome)}</span> / {t.sec}
+                        {owned && (
+                          <span style={{ fontSize: '0.75rem', color: '#e94560', marginLeft: '6px' }}>
+                            ({language === 'ru' ? 'налог' : 'tax'} {Math.round(taxRate * 100)}%)
+                          </span>
+                        )}
                       </div>
                       {owned && upgradesList.length > 0 && (
                         <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
@@ -1471,12 +1511,12 @@ function App() {
           <div className="header-stat-item">
             <span className="stat-label-text">{t.cash}:</span>
             <span className="stat-icon">💵</span>
-            <span className="stat-value">{formatCurrency(cash)}</span>
+            <span className="stat-value">{formatCompactCurrency(cash)}</span>
           </div>
           <div className="header-stat-item">
             <span className="stat-label-text">{t.netWorth}:</span>
             <span className="stat-icon">💎</span>
-            <span className="stat-value">{formatCurrency(netWorth)}</span>
+            <span className="stat-value">{formatCompactCurrency(netWorth)}</span>
           </div>
         </div>
         <button className="settings-toggle-btn" onClick={() => setShowSettings(true)}>⚙️</button>
