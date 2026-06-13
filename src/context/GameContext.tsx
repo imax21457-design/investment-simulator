@@ -366,7 +366,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        const changePercent = randomFactor + trend + baseDrift;
+        // Find the base price of the stock from INITIAL_STOCKS to calculate deviation
+        const initialStock = INITIAL_STOCKS.find(s => s.symbol === stock.symbol);
+        const basePrice = initialStock ? initialStock.price : 100;
+        
+        // Logarithm of ratio of current price to base price
+        const logRatio = Math.log(stock.price / basePrice);
+        
+        // Quadratic mean reversion: when near base price, pull is negligible.
+        // As it deviates more, pull grows quadratically to act as a soft boundary.
+        const meanReversionDrift = -0.008 * logRatio * Math.abs(logRatio);
+
+        const changePercent = randomFactor + trend + baseDrift + meanReversionDrift;
         const newPrice = Math.max(1, stock.price * (1 + changePercent));
         const newHistory = [...stock.history, newPrice].slice(-50);
         return { ...stock, price: newPrice, history: newHistory };

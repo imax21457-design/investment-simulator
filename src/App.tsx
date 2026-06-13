@@ -186,6 +186,7 @@ const StockDetailsModal = ({
   const { stocks, ownedStocks, cash, buyStock, sellStock, buyStockForecast, activeForecasts, language } = useGame();
   const stock = stocks.find(s => s.symbol === symbol);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [qty, setQty] = useState<number>(1);
 
   if (!stock) return null;
 
@@ -454,8 +455,8 @@ const StockDetailsModal = ({
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '8px' }}>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', flex: 1, lineHeight: 1.3 }}>
                   {language === 'ru' 
-                    ? 'Анализ рынка на 15 секунд. Изменяет тренд цены!' 
-                    : '15-second analysis. Shunts price trend!'}
+                    ? 'Анализ рыночных алгоритмов на 15 секунд.' 
+                    : '15-second analysis of market algorithms.'}
                 </div>
                 <button
                   onClick={() => buyStockForecast(stock.symbol)}
@@ -479,26 +480,108 @@ const StockDetailsModal = ({
           </div>
 
           <div className="modal-trade-section" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '15px' }}>
+            <div className="qty-selector-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>
+                {language === 'ru' ? 'Количество:' : 'Quantity:'}
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#fff',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  width: '70px',
+                  textAlign: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold'
+                }}
+              />
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {([5, 10, 100] as const).map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => setQty(preset)}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '0.75rem',
+                      backgroundColor: 'rgba(255,255,255,0.03)',
+                      border: '1.5px solid rgba(255,255,255,0.06)',
+                      color: '#fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      width: 'auto',
+                      margin: 0
+                    }}
+                  >
+                    +{preset}
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    const maxBuy = Math.floor(cash / stock.price);
+                    setQty(Math.max(1, maxBuy));
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.75rem',
+                    backgroundColor: 'rgba(78, 204, 163, 0.1)',
+                    border: '1.5px solid rgba(78, 204, 163, 0.2)',
+                    color: 'var(--accent-color)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    width: 'auto',
+                    margin: 0
+                  }}
+                >
+                  {language === 'ru' ? 'МАКС КУПИТЬ' : 'MAX BUY'}
+                </button>
+                <button
+                  onClick={() => {
+                    const maxSell = ownedStocks[stock.symbol] || 0;
+                    setQty(Math.max(1, maxSell));
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.75rem',
+                    backgroundColor: 'rgba(233, 69, 96, 0.1)',
+                    border: '1.5px solid rgba(233, 69, 96, 0.2)',
+                    color: 'var(--danger-color)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    width: 'auto',
+                    margin: 0
+                  }}
+                >
+                  {language === 'ru' ? 'МАКС ПРОДАТЬ' : 'MAX SELL'}
+                </button>
+              </div>
+            </div>
+
             <div className="trade-info-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '12px' }}>
               <span>{t.inStock}: <strong style={{ color: '#fff' }}>{ownedStocks[stock.symbol] || 0}</strong></span>
               <span>{t.balance}: <strong style={{ color: '#fff' }}>{formatCurrency(cash)}</strong></span>
             </div>
             <div className="trade-actions-row" style={{ display: 'flex', gap: '10px' }}>
               <button 
-                onClick={() => buyStock(stock.symbol, 1)} 
-                disabled={cash < stock.price} 
+                onClick={() => buyStock(stock.symbol, qty)} 
+                disabled={cash < stock.price * qty} 
                 className="buy-btn"
                 style={{ flex: 1, padding: '12px 0', fontSize: '0.95rem', fontWeight: 700 }}
               >
-                {t.buy} 1
+                {t.buy} {qty} ({formatCurrency(stock.price * qty)})
               </button>
               <button 
-                onClick={() => sellStock(stock.symbol, 1)} 
-                disabled={(ownedStocks[stock.symbol] || 0) <= 0} 
+                onClick={() => sellStock(stock.symbol, qty)} 
+                disabled={(ownedStocks[stock.symbol] || 0) < qty} 
                 className="sell-btn"
                 style={{ flex: 1, padding: '12px 0', fontSize: '0.95rem', fontWeight: 700 }}
               >
-                {t.sell} 1
+                {t.sell} {qty} ({formatCurrency(stock.price * qty)})
               </button>
             </div>
           </div>
@@ -519,6 +602,7 @@ const StockFullChartModal = ({
   const stock = stocks.find(s => s.symbol === symbol);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [timeframe, setTimeframe] = useState<15 | 30 | 50>(50);
+  const [qty, setQty] = useState<number>(1);
 
   if (!stock) return null;
 
@@ -780,26 +864,108 @@ const StockFullChartModal = ({
           </div>
 
           <div className="modal-trade-section" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+            <div className="qty-selector-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>
+                {language === 'ru' ? 'Количество:' : 'Quantity:'}
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#fff',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  width: '70px',
+                  textAlign: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold'
+                }}
+              />
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {([5, 10, 100] as const).map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => setQty(preset)}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '0.75rem',
+                      backgroundColor: 'rgba(255,255,255,0.03)',
+                      border: '1.5px solid rgba(255,255,255,0.06)',
+                      color: '#fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      width: 'auto',
+                      margin: 0
+                    }}
+                  >
+                    +{preset}
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    const maxBuy = Math.floor(cash / stock.price);
+                    setQty(Math.max(1, maxBuy));
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.75rem',
+                    backgroundColor: 'rgba(78, 204, 163, 0.1)',
+                    border: '1.5px solid rgba(78, 204, 163, 0.2)',
+                    color: 'var(--accent-color)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    width: 'auto',
+                    margin: 0
+                  }}
+                >
+                  {language === 'ru' ? 'МАКС КУПИТЬ' : 'MAX BUY'}
+                </button>
+                <button
+                  onClick={() => {
+                    const maxSell = ownedStocks[stock.symbol] || 0;
+                    setQty(Math.max(1, maxSell));
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.75rem',
+                    backgroundColor: 'rgba(233, 69, 96, 0.1)',
+                    border: '1.5px solid rgba(233, 69, 96, 0.2)',
+                    color: 'var(--danger-color)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    width: 'auto',
+                    margin: 0
+                  }}
+                >
+                  {language === 'ru' ? 'МАКС ПРОДАТЬ' : 'MAX SELL'}
+                </button>
+              </div>
+            </div>
+
             <div className="trade-info-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#94a3b8', marginBottom: '15px' }}>
               <span>{t.inStock}: <strong style={{ color: '#fff' }}>{ownedStocks[stock.symbol] || 0}</strong></span>
               <span>{t.balance}: <strong style={{ color: '#fff' }}>{formatCurrency(cash)}</strong></span>
             </div>
             <div className="trade-actions-row" style={{ display: 'flex', gap: '12px' }}>
               <button 
-                onClick={() => buyStock(stock.symbol, 1)} 
-                disabled={cash < stock.price} 
+                onClick={() => buyStock(stock.symbol, qty)} 
+                disabled={cash < stock.price * qty} 
                 className="buy-btn"
                 style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: 700 }}
               >
-                {t.buy} 1
+                {t.buy} {qty} ({formatCurrency(stock.price * qty)})
               </button>
               <button 
-                onClick={() => sellStock(stock.symbol, 1)} 
-                disabled={(ownedStocks[stock.symbol] || 0) <= 0} 
+                onClick={() => sellStock(stock.symbol, qty)} 
+                disabled={(ownedStocks[stock.symbol] || 0) < qty} 
                 className="sell-btn"
                 style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: 700 }}
               >
-                {t.sell} 1
+                {t.sell} {qty} ({formatCurrency(stock.price * qty)})
               </button>
             </div>
           </div>
